@@ -1,0 +1,24 @@
+{
+  "project": "KADE smoke test",
+  "goal": "Verify populate → dispatch → update flow",
+  "tasks": [
+    {
+      "id": "t1",
+      "title": "Echo hello world",
+      "description": "Create a file called hello.txt with the content 'Hello from KADE' in the repo root.",
+      "provider": "claude",
+      "model": "sonnet",
+      "priority": "medium",
+      "tags": ["Improvement"]
+    },
+    {
+      "id": "t2",
+      "title": "Verify hello file",
+      "description": "Read hello.txt and confirm it contains 'Hello from KADE'.",
+      "provider": "claude",
+      "model": "haiku",
+      "priority": "low",
+      "blocked_by": ["t1"]
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "name": "kade",
+  "version": "1.0.0",
+  "description": "Notion-driven AI task orchestration — populate tasks from JSON and auto-dispatch to provider CLIs",
+  "main": "src/poller.js",
+  "scripts": {
+    "populate": "node src/populate.js",
+    "poller": "node src/poller.js",
+    "test": "node --test test/*.test.js"
+  },
+  "keywords": ["notion", "ai", "orchestration"],
+  "license": "MIT",
+  "dependencies": {
+    "@notionhq/client": "^2.2.15",
+    "dotenv": "^16.4.7"
+  }
+}

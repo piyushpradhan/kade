@@ -1,0 +1,67 @@
+{
+  "notion": {
+    "tasks_database_id": "8d07db1a-e37b-820b-88fc-81633545f728",
+    "projects_database_id": "6367db1a-e37b-825a-b873-07c081968236",
+    "token_env": "NOTION_TOKEN",
+    "success_status": "Done",
+    "failure_status": "Not Started"
+  },
+  "poll": {
+    "interval_seconds": 30,
+    "max_concurrent": 3,
+    "api_delay_ms": 350
+  },
+  "repo": {
+    "path": "/Users/mediocre/projects/kade"
+  },
+  "providers": {
+    "claude": {
+      "command": "claude",
+      "subcommand": [],
+      "prompt_flag": "-p",
+      "model_flag": "--model",
+      "prompt_as_positional": false,
+      "timeout_seconds": 600,
+      "extra_args": ["--no-input"]
+    },
+    "grok": {
+      "command": "grok",
+      "subcommand": [],
+      "prompt_flag": "-p",
+      "model_flag": "--model",
+      "cwd_flag": "--cwd",
+      "prompt_as_positional": false,
+      "timeout_seconds": 600,
+      "extra_args": []
+    },
+    "opencode": {
+      "command": "opencode",
+      "subcommand": ["run"],
+      "prompt_as_positional": true,
+      "model_flag": "-m",
+      "cwd_flag": "--dir",
+      "env": { "OPENCODE_CONFIG": "./opencode.kade.jsonc" },
+      "timeout_seconds": 600,
+      "extra_args": ["--pure", "--auto"]
+    },
+    "codex": {
+      "command": "codex",
+      "prompt_flag": "--prompt",
+      "model_flag": "--model",
+      "cwd_flag": "--cwd",
+      "prompt_as_positional": false,
+      "timeout_seconds": 600,
+      "extra_args": []
+    },
+    "gemini": {
+      "command": "gemini",
+      "prompt_flag": "-p",
+      "model_flag": "--model",
+      "cwd_flag": "--cwd",
+      "prompt_as_positional": false,
+      "timeout_seconds": 600,
+      "extra_args": []
+    }
+  },
+  "default_provider": "claude"
+}

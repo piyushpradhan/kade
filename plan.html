@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notion-Driven AI Task orchestration Plan</title>
+<style>
+  :root {
+    --bg: #0d0d0d;
+    --surface: #161616;
+    --surface2: #1e1e1e;
+    --border: #2a2a2a;
+    --text: #e0e0e0;
+    --text-dim: #888;
+    --accent: #7c3aed;
+    --accent2: #06b6d4;
+    --green: #22c55e;
+    --orange: #f59e0b;
+    --red: #ef4444;
+    --mono: 'SF Mono', 'Monaco', 'Fira Code', 'JetBrains Mono', monospace;
+    --sans: -apple-system, 'Segoe UI', 'Helvetica Neue', sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.7;
+    padding: 0;
+  }
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 60px 40px 120px;
+  }
+  h1 {
+    font-size: 2.4rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle {
+    color: var(--text-dim);
+    font-size: 1.05rem;
+    margin-bottom: 50px;
+  }
+  h2 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-top: 60px;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    letter-spacing: -0.02em;
+  }
+  h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-top: 35px;
+    margin-bottom: 12px;
+    color: var(--accent2);
+  }
+  h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-top: 25px;
+    margin-bottom: 10px;
+  }
+  p {
+    margin-bottom: 14px;
+    color: #ccc;
+  }
+  ul, ol {
+    margin-bottom: 16px;
+    padding-left: 24px;
+  }
+  li {
+    margin-bottom: 6px;
+    color: #ccc;
+  }
+  code {
+    font-family: var(--mono);
+    font-size: 0.88em;
+    background: var(--surface2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--accent2);
+  }
+  pre {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    overflow-x: auto;
+    margin: 16px 0 24px;
+    font-size: 0.85rem;
+    line-height: 1.55;
+  }
+  pre code {
+    background: none;
+    padding: 0;
+    color: #d4d4d4;
+    font-size: inherit;
+  }
+  .kw { color: #c678dd; }
+  .str { color: #98c379; }
+  .fn { color: #61afef; }
+  .var { color: #e06c75; }
+  .cmt { color: #5c6370; font-style: italic; }
+  .num { color: #d19a66; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0 24px;
+    font-size: 0.9rem;
+  }
+  th {
+    text-align: left;
+    padding: 12px 16px;
+    background: var(--surface2);
+    border-bottom: 2px solid var(--border);
+    font-weight: 600;
+    color: var(--text);
+  }
+  td {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    color: #aaa;
+  }
+  td:first-child { color: var(--accent2); font-family: var(--mono); font-size: 0.85em; }
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.78em;
+    font-weight: 600;
+  }
+  .badge-free { background: rgba(34,197,94,0.15); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+  .badge-cost { background: rgba(239,68,68,0.12); color: var(--red); border: 1px solid rgba(239,68,68,0.25); }
+  .badge-cheap { background: rgba(245,158,11,0.12); color: var(--orange); border: 1px solid rgba(245,158,11,0.25); }
+  .flow {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 30px 0;
+  }
+  .flow-step {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+  }
+  .flow-num {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    min-width: 48px;
+    font-family: var(--mono);
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--accent);
+    border-left: 3px solid var(--accent);
+    padding-left: 16px;
+  }
+  .flow-content {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0 10px 10px 0;
+    padding: 16px 20px;
+    margin-bottom: 0;
+  }
+  .flow-content h4 { margin-top: 0; }
+  .flow-arrow {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 1.4rem;
+    margin: -2px 0 -2px 24px;
+    line-height: 1;
+  }
+  .callout {
+    background: linear-gradient(135deg, rgba(124,58,237,0.08), rgba(6,182,212,0.05));
+    border: 1px solid rgba(124,58,237,0.2);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin: 24px 0;
+  }
+  .callout-title {
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .callout p { margin-bottom: 0; }
+  .stack {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 20px 0;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .card h4 { margin-top: 0; color: var(--accent2); }
+  .card p { font-size: 0.9rem; margin-bottom: 0; }
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 40px 0;
+  }
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 28px;
+    margin-bottom: 50px;
+  }
+  .toc-title {
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+  }
+  .toc ol { padding-left: 20px; margin: 0; }
+  .toc a {
+    color: #aaa;
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .toc a:hover { color: var(--accent2); }
+  .toc li { margin-bottom: 4px; font-size: 0.9rem; }
+  .pill-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 10px 0 20px;
+  }
+  .pill {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.82em;
+    font-family: var(--mono);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+  }
+  .file-tree {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    line-height: 1.8;
+    color: #aaa;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 16px 0;
+  }
+  .file-tree .dir { color: var(--accent); font-weight: 600; }
+  .file-tree .file { color: var(--accent2); }
+  .file-tree .cmt { color: var(--text-dim); }
+  .checklist {
+    list-style: none;
+    padding: 0;
+  }
+  .checklist li {
+    padding-left: 28px;
+    position: relative;
+    margin-bottom: 10px;
+  }
+  .checklist li::before {
+    content: '\\2610';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-size: 1.1rem;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>Notion-Driven AI Task Orchestration</h1>
+<p class="subtitle">A system for breaking prompts into tasks, tracking them in Notion, and auto-dispatching them to any AI provider's CLI agent &mdash; with zero token cost on database operations.</p>
+
+<div class="toc">
+  <div class="toc-title">Contents</div>
+  <ol>
+    <li><a href="#overview">System Overview</a></li>
+    <li><a href="#core-principle">The Core Principle: Why This Is Cheap</a></li>
+    <li><a href="#architecture">Architecture &amp; Data Flow</a></li>
+    <li><a href="#components">Component Breakdown</a></li>
+    <li><a href="#notion-schema">Notion Database Schema</a></li>
+    <li><a href="#multi-provider">Multi-Provider Dispatch</a></li>
+    <li><a href="#cost">Token Cost Analysis</a></li>
+    <li><a href="#project-structure">Project Structure</a></li>
+    <li><a href="#implementation">Step-by-Step Implementation Plan</a></li>
+    <li><a href="#code">Full Code: Each Component</a></li>
+    <li><a href="#limitations">Limitations &amp; Workarounds</a></li>
+    <li><a href="#config">Configuration Reference</a></li>
+    <li><a href="#checklist">Build Checklist</a></li>
+  </ol>
+</div>
+
+<!-- ===================== OVERVIEW ===================== -->
+<h2 id="overview">1. System Overview</h2>
+
+<p>The goal: you type a prompt into your CLI. An LLM breaks it into structured action items. Those items become tickets in a Notion database &mdash; complete with projects, goals, tasks, subtasks, dependencies, priorities, and a <code>provider</code> field specifying which AI agent should execute each task. A background daemon watches for tickets moved to <code>in progress</code>, dispatches them to the appropriate provider's CLI (Claude, Codex, OpenCode, Grok, Gemini, etc.), and updates the ticket state when the agent finishes.</p>
+
+<div class="pill-row">
+  <span class="pill">Notion API (free)</span>
+  <span class="pill">Multi-provider CLI dispatch</span>
+  <span class="pill">Subtask hierarchy</span>
+  <span class="pill">Dependency tracking</span>
+  <span class="pill">Zero-token CRUD</span>
+  <span class="pill">Polling-based (no webhooks needed)</span>
+</div>
+
+<div class="stack">
+  <div class="card">
+    <h4>What costs tokens</h4>
+    <p>Only the initial prompt breakdown (in your existing CLI session) and the actual task execution by the provider agent. These are unavoidable &mdash; you'd pay for them anyway.</p>
+  </div>
+  <div class="card">
+    <h4>What is completely free</h4>
+    <p>Populating Notion, polling for status changes, dispatching to a provider CLI, and updating ticket state. All done by deterministic scripts calling the Notion REST API directly &mdash; no LLM involved.</p>
+  </div>
+</div>
+
+<!-- ===================== CORE PRINCIPLE ===================== -->
+<h2 id="core-principle">2. The Core Principle: Why This Is Cheap</h2>
+
+<div class="callout">
+  <div class="callout-title">Key Insight</div>
+  <p>Notion's REST API is free (rate-limited to ~3 requests/second, no monetary cost). The <strong>Notion MCP</strong> is just a wrapper around that API &mdash; the protocol is free, but the <strong>LLM driving the MCP</strong> burns tokens. If you bypass the LLM and call the API from scripts, every Notion operation becomes free.</p>
+</div>
+
+<p>The original idea was "use a cheap AI to populate Notion." The refinement: <strong>don't use any AI for Notion CRUD</strong>. If the breakdown step outputs structured JSON, a script can parse it and make direct API calls. No LLM, no MCP, no tokens.</p>
+
+<p>The "cheap AI" approach (using GPT-4-mini, Haiku, or Gemini Flash to drive Notion MCP) is a fallback if you can't get structured JSON from the breakdown step &mdash; but it's strictly worse than the script approach. It costs *some* tokens and adds latency, with no benefit over deterministic code.</p>
+
+<table>
+  <tr>
+    <th>Approach</th>
+    <th>Cost per Notion operation</th>
+    <th>Latency</th>
+    <th>Reliability</th>
+  </tr>
+  <tr>
+    <td>LLM driving Notion MCP</td>
+    <td><span class="badge badge-cost">Expensive</span> Full LLM turn per operation</td>
+    <td>2-10 seconds</td>
+    <td>LLM may hallucinate fields or misformat</td>
+  </tr>
+  <tr>
+    <td>Cheap LLM (Haiku/Flash) driving MCP</td>
+    <td><span class="badge badge-cheap">Cheap but nonzero</span> ~$0.001 per operation</td>
+    <td>1-3 seconds</td>
+    <td>Same reliability risk, smaller</td>
+  </tr>
+  <tr>
+    <td>Script calling Notion API directly</td>
+    <td><span class="badge badge-free">Free</span> $0.00 always</td>
+    <td>50-200ms</td>
+    <td>Deterministic, never fails on formatting</td>
+  </tr>
+</table>
+
+<!-- ===================== ARCHITECTURE ===================== -->
+<h2 id="architecture">3. Architecture &amp; Data Flow</h2>
+
+<div class="flow">
+
+  <div class="flow-step">
+    <div class="flow-num">1</div>
+    <div class="flow-content">
+      <h4>You type a prompt in your CLI <span class="badge badge-cost">tokens: your session</span></h4>
+      <p>Your normal LLM session (Claude, Codex, OpenCode, etc.) receives the prompt and breaks it into structured JSON: projects, tasks, subtasks, dependencies, priorities, and recommended provider per task.</p>
+    </div>
+  </div>
+  <div class="flow-arrow">&#8595;</div>
+
+  <div class="flow-step">
+    <div class="flow-num">2</div>
+    <div class="flow-content">
+      <h4>Notion Populator script <span class="badge badge-free">tokens: $0</span></h4>
+      <p>A Node.js/Python script reads the JSON and creates Notion pages in your database &mdash; tasks, subtasks (with parent relations), dependency relations, and all properties. Direct API calls, no LLM.</p>
+    </div>
+  </div>
+  <div class="flow-arrow">&#8595;</div>
+
+  <div class="flow-step">
+    <div class="flow-num">3</div>
+    <div class="flow-content">
+      <h4>You review in Notion UI <span class="badge badge-free">tokens: $0</span></h4>
+      <p>All tasks are visible in Notion. You can manually edit, reorder, reassign providers, add details, and move tasks from <code>todo</code> to <code>in progress</code> when you're ready for work to begin.</p>
+    </div>
+  </div>
+  <div class="flow-arrow">&#8595;</div>
+
+  <div class="flow-step">
+    <div class="flow-num">4</div>
+    <div class="flow-content">
+      <h4>Poller/Dispatcher daemon <span class="badge badge-free">tokens: $0</span></h4>
+      <p>A background process polls Notion every 30 seconds for tickets in <code>in progress</code> that aren't yet <code>assigned</code>. When it finds one, it reads the <code>Provider</code> property, marks the ticket as assigned (to prevent double-dispatch), and spawns the appropriate CLI agent as a subprocess.</p>
+    </div>
+  </div>
+  <div class="flow-arrow">&#8595;</div>
+
+  <div class="flow-step">
+    <div class="flow-num">5</div>
+    <div class="flow-content">
+      <h4>Provider agent executes the task <span class="badge badge-cost">tokens: provider session</span></h4>
+      <p>The CLI agent (Claude, Codex, OpenCode, Grok, Gemini, etc.) works on the task in your repository. The task description from Notion is passed as the prompt. The agent has full codebase access.</p>
+    </div>
+  </div>
+  <div class="flow-arrow">&#8595;</div>
+
+  <div class="flow-step">
+    <div class="flow-num">6</div>
+    <div class="flow-content">
+      <h4>State updater script <span class="badge badge-free">tokens: $0</span></h4>
+      <p>When the agent subprocess exits, a wrapper script updates the Notion ticket: status &rarr; <code>review</code>, adds a timestamp, and optionally attaches the agent's output summary. Direct API call, no LLM.</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===================== COMPONENTS ===================== -->
+<h2 id="components">4. Component Breakdown</h2>
+
+<h3>Component 1: Prompt Breakdown <span class="badge badge-cost">tokens: your CLI session</span></h3>
+<p>This happens inside your existing CLI session. You type your prompt, and the LLM produces structured JSON. The key is prompting for JSON output, not free-form text. The LLM also assigns a <code>provider</code> to each task based on what's best suited (or you can set a default provider and override per-task in Notion later).</p>
+
+<p>Example system prompt addition for your CLI:</p>
+<pre><code><span class="cmt">// Add to your CLI agent's system prompt or AGENTS.md:</span>
+
+<span class="kw">When</span> the user asks you to plan or break down a task, output a JSON block
+wrapped in &lt;task-plan&gt; tags. Structure:
+
+{
+  "project": "Project name",
+  "goal": "One-line goal description",
+  "tasks": [
+    {
+      "id": "t1",
+      "title": "Task title",
+      "description": "Detailed prompt for the agent",
+      "provider": "codex",
+      "priority": "high",
+      "subtasks": [
+        {
+          "id": "t1.1",
+          "title": "Subtask title",
+          "description": "...",
+          "provider": "opencode",
+          "priority": "medium"
+        }
+      ],
+      "blocked_by": ["t2"],
+      "related": ["t3"]
+    }
+  ]
+}
+
+<span class="cmt">// Provider options: "claude", "codex", "opencode", "grok", "gemini"</span>
+<span class="cmt">// Priority options: "urgent", "high", "medium", "low"</span></code></pre>
+
+<h3>Component 2: Notion Populator <span class="badge badge-free">tokens: $0</span></h3>
+<p>A standalone script that takes the JSON from Component 1 and creates Notion pages. Run it manually after the breakdown, or pipe the JSON to it automatically.</p>
+
+<p>Responsibilities:</p>
+<ul>
+  <li>Create a page for each task in the target Notion database</li>
+  <li>Set all properties (title, status, provider, priority, description)</li>
+  <li>Create parent-child relations for subtasks</li>
+  <li>Create dependency relations (blocked_by, related)</li>
+  <li>Set initial status to <code>todo</code></li>
+</ul>
+
+<h3>Component 3: Poller / Dispatcher <span class="badge badge-free">tokens: $0</span></h3>
+<p>A long-running daemon that watches the Notion database for tasks ready to be worked on.</p>
+
+<p>Responsibilities:</p>
+<ul>
+  <li>Poll Notion every N seconds (default: 30s) for tasks where <code>status = in_progress</code> and <code>assigned = false</code></li>
+  <li>For each found task: read the <code>Provider</code> property</li>
+  <li>Atomically mark the task as <code>assigned = true</code> (prevents double-dispatch if running multiple poller instances)</li>
+  <li>Spawn the appropriate CLI agent as a subprocess, passing the task description as the prompt</li>
+  <li>Track the subprocess; when it exits, trigger Component 4</li>
+  <li>Support concurrent task execution (configurable max parallelism)</li>
+  <li>Respect dependencies: don't dispatch a task if its <code>blocked_by</code> tasks aren't <code>done</code></li>
+</ul>
+
+<h3>Component 4: State Updater <span class="badge badge-free">tokens: $0</span></h3>
+<p>A function called by the dispatcher when an agent subprocess finishes.</p>
+
+<p>Responsibilities:</p>
+<ul>
+  <li>Update the Notion ticket status to <code>review</code> (on success) or <code>todo</code> (on failure, with an error note)</li>
+  <li>Set <code>assigned = false</code> so it can be re-dispatched if moved back to <code>in_progress</code></li>
+  <li>Record the completion timestamp</li>
+  <li>Optionally capture the agent's stdout/stderr and append it to the Notion page body</li>
+</ul>
+
+<!-- ===================== NOTION SCHEMA ===================== -->
+<h2 id="notion-schema">5. Notion Database Schema</h2>
+
+<p>Create a single Notion database (e.g., "Task Board") with the following properties. All of these are standard Notion property types &mdash; no custom integrations needed.</p>
+
+<table>
+  <tr>
+    <th>Property Name</th>
+    <th>Notion Type</th>
+    <th>Purpose</th>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>Title</td>
+    <td>Task name / summary</td>
+  </tr>
+  <tr>
+    <td>Status</td>
+    <td>Select</td>
+    <td>Options: <code>todo</code>, <code>in_progress</code>, <code>review</code>, <code>done</code>, <code>blocked</code></td>
+  </tr>
+  <tr>
+    <td>Provider</td>
+    <td>Select</td>
+    <td>Which CLI agent executes: <code>claude</code>, <code>codex</code>, <code>opencode</code>, <code>grok</code>, <code>gemini</code></td>
+  </tr>
+  <tr>
+    <td>Priority</td>
+    <td>Select</td>
+    <td>Options: <code>urgent</code>, <code>high</code>, <code>medium</code>, <code>low</code></td>
+  </tr>
+  <tr>
+    <td>Project</td>
+    <td>Multi-select or Relation</td>
+    <td>Group tasks by project/goal. Use Multi-select for simple grouping, or a separate Projects database with a Relation for richer metadata.</td>
+  </tr>
+  <tr>
+    <td>Parent Task</td>
+    <td>Relation (self-referential)</td>
+    <td>Links subtasks to their parent task. Create the relation, then filter to show only tasks where this is empty for top-level tasks.</td>
+  </tr>
+  <tr>
+    <td>Blocked By</td>
+    <td>Relation (self-referential)</td>
+    <td>Dependencies. The dispatcher checks that all <code>blocked_by</code> tasks are <code>done</code> before dispatching.</td>
+  </tr>
+  <tr>
+    <td>Related To</td>
+    <td>Relation (self-referential)</td>
+    <td>Non-blocking relationships between tasks (for reference / context sharing).</td>
+  </tr>
+  <tr>
+    <td>Assigned</td>
+    <td>Checkbox</td>
+    <td>Internal flag: <code>true</code> when the dispatcher has picked up the task. Prevents double-dispatch. Reset to <code>false</code> on completion.</td>
+  </tr>
+  <tr>
+    <td>Tags</td>
+    <td>Multi-select</td>
+    <td>Free-form categorization (e.g., <code>bug</code>, <code>feature</code>, <code>refactor</code>, <code>docs</code>)</td>
+  </tr>
+  <tr>
+    <td>Started At</td>
+    <td>Date</td>
+    <td>Timestamp when the agent began working</td>
+  </tr>
+  <tr>
+    <td>Completed At</td>
+    <td>Date</td>
+    <td>Timestamp when the agent finished</td>
+  </tr>
+  <tr>
+    <td>Exit Code</td>
+    <td>Number</td>
+    <td>The subprocess exit code (0 = success, nonzero = failure)</td>
+  </tr>
+  <tr>
+    <td>Error Log</td>
+    <td>Text (or page body)</td>
+    <td>Agent's stderr or error output, if the task failed</td>
+  </tr>
+</table>
+
+<p>The task's detailed description / prompt for the agent goes in the <strong>page body</strong> (the rich text content area below the properties). This is what gets passed to the CLI agent as the prompt.</p>
+
+<h4>Notion Database Views to Create</h4>
+<ul>
+  <li><strong>Kanban Board</strong> &mdash; grouped by <code>Status</code>. This is your main view.</li>
+  <li><strong>By Project</strong> &mdash; grouped by <code>Project</code>, filtered to <code>Status &ne; done</code>.</li>
+  <li><strong>Queue (todo)</strong> &mdash; list view, filtered to <code>Status = todo</code>, sorted by <code>Priority</code>.</li>
+  <li><strong>Active (in progress)</strong> &mdash; list view, filtered to <code>Status = in_progress</code>.</li>
+  <li><strong>Review queue</strong> &mdash; list view, filtered to <code>Status = review</code>.</li>
+  <li><strong>Subtasks</strong> &mdash; filtered to <code>Parent Task</code> is not empty.</li>
+</ul>
+
+<!-- ===================== MULTI-PROVIDER ===================== -->
+<h2 id="multi-provider">6. Multi-Provider Dispatch</h2>
+
+<p>Each task has a <code>Provider</code> Select property. The dispatcher reads this and invokes the matching CLI. All major AI coding CLIs accept a prompt via a command-line flag and work in a specified directory.</p>
+
+<table>
+  <tr>
+    <th>Provider value in Notion</th>
+    <th>CLI command</th>
+    <th>Invocation pattern</th>
+    <th>Notes</th>
+  </tr>
+  <tr>
+    <td>claude</td>
+    <td><code>claude</code></td>
+    <td><code>claude -p "task desc" --cwd /repo</code></td>
+    <td>Claude Code CLI. Uses your Claude subscription.</td>
+  </tr>
+  <tr>
+    <td>codex</td>
+    <td><code>codex</code></td>
+    <td><code>codex --prompt "task desc" --cwd /repo</code></td>
+    <td>OpenAI Codex CLI. Uses your OpenAI subscription.</td>
+  </tr>
+  <tr>
+    <td>opencode</td>
+    <td><code>opencode</code></td>
+    <td><code>opencode -p "task desc" --cwd /repo</code></td>
+    <td>OpenCode CLI. Configurable model via opencode.json.</td>
+  </tr>
+  <tr>
+    <td>grok</td>
+    <td><code>grok</code></td>
+    <td><code>grok --prompt "task desc" --cwd /repo</code></td>
+    <td>Grok CLI (if available). Adjust flags per your install.</td>
+  </tr>
+  <tr>
+    <td>gemini</td>
+    <td><code>gemini</code></td>
+    <td><code>gemini -p "task desc" --cwd /repo</code></td>
+    <td>Gemini CLI. Uses Google AI credentials.</td>
+  </tr>
+</table>
+
+<div class="callout">
+  <div class="callout-title">Provider Abstraction</div>
+  <p>Each provider CLI has slightly different flags. The dispatcher uses an adapter map (a simple JSON/dict config) that maps the Notion <code>Provider</code> value to the exact command template. Adding a new provider is a one-line config change &mdash; no code modification needed.</p>
+</div>
+
+<h4>Provider Adapter Config</h4>
+<pre><code>{
+  "claude": {
+    "command": "claude",
+    "prompt_flag": "-p",
+    "cwd_flag": "--cwd",
+    "extra_args": ["--no-input"],
+    "timeout": 600
+  },
+  "codex": {
+    "command": "codex",
+    "prompt_flag": "--prompt",
+    "cwd_flag": "--cwd",
+    "extra_args": [],
+    "timeout": 600
+  },
+  "opencode": {
+    "command": "opencode",
+    "prompt_flag": "-p",
+    "cwd_flag": "--cwd",
+    "extra_args": [],
+    "timeout": 600
+  },
+  "grok": {
+    "command": "grok",
+    "prompt_flag": "--prompt",
+    "cwd_flag": "--cwd",
+    "extra_args": [],
+    "timeout": 600
+  },
+  "gemini": {
+    "command": "gemini",
+    "prompt_flag": "-p",
+    "cwd_flag": "--cwd",
+    "extra_args": [],
+    "timeout": 600
+  }
+}</code></pre>
+
+<!-- ===================== COST ANALYSIS ===================== -->
+<h2 id="cost">7. Token Cost Analysis</h2>
+
+<table>
+  <tr>
+    <th>Step</th>
+    <th>Uses LLM?</th>
+    <th>Token cost</th>
+    <th>Frequency</th>
+  </tr>
+  <tr>
+    <td>Prompt breakdown (Component 1)</td>
+    <td>Yes &mdash; your CLI session</td>
+    <td><span class="badge badge-cost">Your session tokens</span></td>
+    <td>Once per prompt</td>
+  </tr>
+  <tr>
+    <td>Populate Notion (Component 2)</td>
+    <td>No &mdash; script</td>
+    <td><span class="badge badge-free">$0.00</span></td>
+    <td>Once per prompt</td>
+  </tr>
+  <tr>
+    <td>Poll for in-progress tasks (Component 3)</td>
+    <td>No &mdash; script</td>
+    <td><span class="badge badge-free">$0.00</span></td>
+    <td>Every 30 seconds (Notion API, free)</td>
+  </tr>
+  <tr>
+    <td>Dispatch to provider CLI (Component 3)</td>
+    <td>No &mdash; subprocess spawn</td>
+    <td><span class="badge badge-free">$0.00</span></td>
+    <td>Once per task dispatch</td>
+  </tr>
+  <tr>
+    <td>Agent executes task (Component 3 &rarr; 5)</td>
+    <td>Yes &mdash; provider agent</td>
+    <td><span class="badge badge-cost">Provider session tokens</span></td>
+    <td>Once per task (unavoidable)</td>
+  </tr>
+  <tr>
+    <td>Update ticket state (Component 4)</td>
+    <td>No &mdash; script</td>
+    <td><span class="badge badge-free">$0.00</span></td>
+    <td>Once per task completion</td>
+  </tr>
+</table>
+
+<p><strong>Bottom line:</strong> You pay for the breakdown (which you're already doing) and the task execution (which is the actual work). All project management overhead &mdash; ticket creation, status tracking, dispatching, state updates &mdash; costs $0.00 in tokens.</p>
+
+<!-- ===================== PROJECT STRUCTURE ===================== -->
+<h2 id="project-structure">8. Project Structure</h2>
+
+<div class="file-tree">
+<span class="dir">kade/</span>
+  <span class="file">package.json</span>              <span class="cmt"># or pyproject.toml if using Python</span>
+  <span class="file">config.json</span>              <span class="cmt"># Notion DB ID, poll interval, provider adapters, repo path</span>
+  <span class="file">.env</span>                      <span class="cmt"># NOTION_TOKEN, provider API keys (if needed)</span>
+  <span class="dir">src/</span>
+    <span class="file">populate.js</span>            <span class="cmt"># Component 2: JSON &rarr; Notion pages</span>
+    <span class="file">poller.js</span>              <span class="cmt"># Component 3: daemon that watches + dispatches</span>
+    <span class="file">dispatcher.js</span>          <span class="cmt"># Component 3: spawns provider CLI subprocess</span>
+    <span class="file">updater.js</span>             <span class="cmt"># Component 4: updates Notion after completion</span>
+    <span class="file">notion-client.js</span>       <span class="cmt"># Thin wrapper around Notion SDK</span>
+    <span class="file">providers.js</span>           <span class="cmt"># Provider adapter map &amp; CLI invocation logic</span>
+  <span class="dir">lib/</span>
+    <span class="file">schema.js</span>              <span class="cmt"># Notion property definitions &amp; validation</span>
+    <span class="file">logger.js</span>              <span class="cmt"># Console + file logging</span>
+  <span class="dir">scripts/</span>
+    <span class="file">start-poller.sh</span>        <span class="cmt"># Launch the daemon (use with tmux/screen/launchd)</span>
+    <span class="file">populate-from-stdin.sh</span>  <span class="cmt"># Pipe breakdown JSON &rarr; populate script</span>
+  <span class="dir">test/</span>
+    <span class="file">populate.test.js</span>
+    <span class="file">dispatcher.test.js</span>
+    <span class="file">updater.test.js</span>
+</div>
+
+<!-- ===================== IMPLEMENTATION PLAN ===================== -->
+<h2 id="implementation">9. Step-by-Step Implementation Plan</h2>
+
+<h3>Phase 1: Notion Setup (manual, ~15 min)</h3>
+<ol>
+  <li>Create a Notion integration at <code>notion.so/my-integrations</code> &rarr; get the <code>NOTION_TOKEN</code></li>
+  <li>Create a new database in Notion with the 14 properties listed in <a href="#notion-schema">Section 5</a></li>
+  <li>Share the database with your integration (Share &rarr; invite your integration)</li>
+  <li>Copy the database ID from the URL: <code>notion.so/DATABASE_ID?v=...</code></li>
+  <li>Create the views listed in Section 5 (Kanban, Queue, Active, Review, Subtasks)</li>
+</ol>
+
+<h3>Phase 2: Core Scripts (~2-3 hours)</h3>
+<ol>
+  <li>Initialize the project: <code>npm init</code> + <code>npm install @notionhq/client</code></li>
+  <li>Write <code>notion-client.js</code> &mdash; thin wrapper with <code>createTask()</code>, <code>queryTasks()</code>, <code>updateTask()</code>, <code>createRelation()</code></li>
+  <li>Write <code>populate.js</code> &mdash; reads JSON from stdin/file, creates pages + relations</li>
+  <li>Write <code>providers.js</code> &mdash; provider adapter map + <code>spawnAgent(provider, prompt, cwd)</code> function</li>
+  <li>Write <code>updater.js</code> &mdash; <code>markComplete(taskId, exitCode, output)</code> and <code>markFailed(taskId, error)</code></li>
+  <li>Write <code>poller.js</code> &mdash; the daemon loop: query &rarr; check dependencies &rarr; dispatch &rarr; await &rarr; update</li>
+</ol>
+
+<h3>Phase 3: Integration &amp; Testing (~1 hour)</h3>
+<ol>
+  <li>Test populate: create a sample JSON, run <code>node src/populate.js sample.json</code>, verify pages appear in Notion</li>
+  <li>Test dispatcher: manually move a task to <code>in_progress</code> in Notion, verify the poller picks it up and spawns the right CLI</li>
+  <li>Test updater: verify the ticket status changes to <code>review</code> after the agent finishes</li>
+  <li>Test dependencies: create a task blocked by another, verify it doesn't dispatch until the blocker is <code>done</code></li>
+  <li>Test concurrency: move multiple tasks to <code>in_progress</code>, verify they run in parallel (up to max concurrency)</li>
+</ol>
+
+<h3>Phase 4: Polish &amp; Deployment (~30 min)</h3>
+<ol>
+  <li>Set up the daemon to run persistently: <code>launchd</code> (macOS), <code>systemd</code> (Linux), or <code>tmux/screen</code></li>
+  <li>Add logging to a file for debugging (<code>logs/poller.log</code>)</li>
+  <li>Add a <code>populate-from-stdin.sh</code> script so you can pipe the breakdown JSON directly: <code>claude -p "plan X" | node src/populate.js</code></li>
+  <li>Optionally: add a CLI command <code>kade</code> that wraps the whole flow (prompt &rarr; breakdown &rarr; populate &rarr; confirm)</li>
+</ol>
+
+<!-- ===================== CODE ===================== -->
+<h2 id="code">10. Full Code: Each Component</h2>
+
+<h3>config.json</h3>
+<pre><code>{
+  "notion": {
+    "database_id": "YOUR_DATABASE_ID",
+    "token_env": "NOTION_TOKEN"
+  },
+  "poll": {
+    "interval_seconds": 30,
+    "max_concurrent": 3
+  },
+  "repo": {
+    "path": "/Users/mediocre/projects/your-repo"
+  },
+  "providers": {
+    "claude": {
+      "command": "claude",
+      "prompt_flag": "-p",
+      "cwd_flag": "--cwd",
+      "extra_args": ["--no-input"],
+      "timeout_seconds": 600
+    },
+    "codex": {
+      "command": "codex",
+      "prompt_flag": "--prompt",
+      "cwd_flag": "--cwd",
+      "extra_args": [],
+      "timeout_seconds": 600
+    },
+    "opencode": {
+      "command": "opencode",
+      "prompt_flag": "-p",
+      "cwd_flag": "--cwd",
+      "extra_args": [],
+      "timeout_seconds": 600
+    },
+    "grok": {
+      "command": "grok",
+      "prompt_flag": "--prompt",
+      "cwd_flag": "--cwd",
+      "extra_args": [],
+      "timeout_seconds": 600
+    },
+    "gemini": {
+      "command": "gemini",
+      "prompt_flag": "-p",
+      "cwd_flag": "--cwd",
+      "extra_args": [],
+      "timeout_seconds": 600
+    }
+  },
+  "default_provider": "claude"
+}</code></pre>
+
+<h3>src/notion-client.js</h3>
+<pre><code><span class="kw">const</span> { Client } = <span class="kw">require</span>(<span class="str">"@notionhq/client"</span>);
+
+<span class="kw">const</span> config = <span class="kw">require</span>(<span class="str">"../config.json"</span>);
+
+<span class="kw">const</span> notion = <span class="kw">new</span> <span class="fn">Client</span>({
+  auth: process.env[config.notion.token_env],
+});
+
+<span class="kw">const</span> DB_ID = config.notion.database_id;
+
+<span class="kw">async function</span> <span class="fn">createTask</span>({ title, description, status, provider, priority, project, tags }) {
+  <span class="kw">const</span> page = <span class="kw">await</span> notion.pages.<span class="fn">create</span>({
+    parent: { database_id: DB_ID },
+    properties: {
+      Name: { title: [{ text: { content: title } }] },
+      Status: { select: { name: status || <span class="str">"todo"</span> } },
+      Provider: { select: { name: provider || config.default_provider } },
+      Priority: { select: { name: priority || <span class="str">"medium"</span> } },
+      ...(project && { Project: { multi_select: [{ name: project }] } }),
+      ...(tags && { Tags: { multi_select: tags.<span class="fn">map</span>(t => ({ name: t })) } }),
+      Assigned: { checkbox: <span class="kw">false</span> },
+    },
+    ...(description && {
+      children: [{
+        object: <span class="str">"block"</span>,
+        type: <span class="str">"paragraph"</span>,
+        paragraph: { rich_text: [{ text: { content: description } }] },
+      }],
+    }),
+  });
+  <span class="kw">return</span> page.id;
+}
+
+<span class="kw">async function</span> <span class="fn">createSubtask</span>(parentId, taskData) {
+  <span class="kw">const</span> pageId = <span class="kw">await</span> <span class="fn">createTask</span>(taskData);
+  <span class="kw">await</span> notion.pages.<span class="fn">update</span>({
+    page_id: pageId,
+    properties: {
+      <span class="str">"Parent Task"</span>: { relation: [{ id: parentId }] },
+    },
+  });
+  <span class="kw">return</span> pageId;
+}
+
+<span class="kw">async function</span> <span class="fn">createRelation</span>(pageId, propertyName, relatedPageId) {
+  <span class="kw">await</span> notion.pages.<span class="fn">update</span>({
+    page_id: pageId,
+    properties: {
+      [propertyName]: { relation: [{ id: relatedPageId }] },
+    },
+  });
+}
+
+<span class="kw">async function</span> <span class="fn">queryInProgressUnassigned</span>() {
+  <span class="kw">const</span> response = <span class="kw">await</span> notion.databases.<span class="fn">query</span>({
+    database_id: DB_ID,
+    filter: {
+      and: [
+        { property: <span class="str">"Status"</span>, select: { equals: <span class="str">"in_progress"</span> } },
+        { property: <span class="str">"Assigned"</span>, checkbox: { equals: <span class="kw">false</span> } },
+      ],
+    },
+  });
+  <span class="kw">return</span> response.results;
+}
+
+<span class="kw">async function</span> <span class="fn">getTaskDescription</span>(pageId) {
+  <span class="kw">const</span> blocks = <span class="kw">await</span> notion.blocks.children.<span class="fn">list</span>({ block_id: pageId });
+  <span class="kw">return</span> blocks.results
+    .<span class="fn">map</span>(b => b.paragraph?.rich_text?.<span class="fn">map</span>(t => t.plain_text).<span class="fn">join</span>(<span class="str">""</span>) || <span class="str">""</span>)
+    .<span class="fn">join</span>(<span class="str">"\n"</span>);
+}
+
+<span class="kw">async function</span> <span class="fn">markAssigned</span>(pageId) {
+  <span class="kw">await</span> notion.pages.<span class="fn">update</span>({
+    page_id: pageId,
+    properties: {
+      Assigned: { checkbox: <span class="kw">true</span> },
+      <span class="str">"Started At"</span>: { date: { start: <span class="kw">new</span> <span class="fn">Date</span>().<span class="fn">toISOString</span>() } },
+    },
+  });
+}
+
+<span class="kw">async function</span> <span class="fn">markComplete</span>(pageId, exitCode, output) {
+  <span class="kw">await</span> notion.pages.<span class="fn">update</span>({
+    page_id: pageId,
+    properties: {
+      Status: { select: { name: exitCode === <span class="num">0</span> ? <span class="str">"review"</span> : <span class="str">"todo"</span> } },
+      Assigned: { checkbox: <span class="kw">false</span> },
+      <span class="str">"Completed At"</span>: { date: { start: <span class="kw">new</span> <span class="fn">Date</span>().<span class="fn">toISOString</span>() } },
+      <span class="str">"Exit Code"</span>: { number: exitCode },
+    },
+  });
+
+  <span class="kw">if</span> (output && exitCode !== <span class="num">0</span>) {
+    <span class="kw">await</span> notion.blocks.children.<span class="fn">append</span>({
+      block_id: pageId,
+      children: [{
+        object: <span class="str">"block"</span>,
+        type: <span class="str">"code"</span>,
+        code: { rich_text: [{ text: { content: output.<span class="fn">slice</span>(<span class="num">0</span>, <span class="num">2000</span>) } }], language: <span class="str">"plain text"</span> },
+      }],
+    });
+  }
+}
+
+<span class="kw">async function</span> <span class="fn">getBlockedByTasks</span>(pageId) {
+  <span class="kw">const</span> page = <span class="kw">await</span> notion.pages.<span class="fn">retrieve</span>({ page_id: pageId });
+  <span class="kw">const</span> relations = page.properties[<span class="str">"Blocked By"</span>]?.relation || [];
+  <span class="kw">const</span> blockedBy = [];
+  <span class="kw">for</span> (<span class="kw">const</span> rel <span class="kw">of</span> relations) {
+    <span class="kw">const</span> blockedPage = <span class="kw">await</span> notion.pages.<span class="fn">retrieve</span>({ page_id: rel.id });
+    <span class="kw">const</span> status = blockedPage.properties[<span class="str">"Status"</span>].select?.name;
+    blockedBy.<span class="fn">push</span>({ id: rel.id, status });
+  }
+  <span class="kw">return</span> blockedBy;
+}
+
+module.exports = {
+  createTask, createSubtask, createRelation,
+  queryInProgressUnassigned, getTaskDescription,
+  markAssigned, markComplete, getBlockedByTasks,
+};</code></pre>
+
+<h3>src/populate.js</h3>
+<pre><code><span class="kw">const</span> { createTask, createSubtask, createRelation } = <span class="kw">require</span>(<span class="str">"./notion-client"</span>);
+
+<span class="cmt">/* Reads a task-plan JSON from stdin or a file argument, creates all pages + relations */</span>
+<span class="kw">async function</span> <span class="fn">main</span>() {
+  <span class="kw">let</span> input;
+  <span class="kw">if</span> (process.argv[<span class="num">2</span>]) {
+    input = <span class="kw">require</span>(<span class="str">"fs"</span>).<span class="fn">readFileSync</span>(process.argv[<span class="num">2</span>], <span class="str">"utf8"</span>);
+  } <span class="kw">else</span> {
+    input = <span class="kw">await</span> <span class="kw">new</span> <span class="fn">Promise</span>(res => {
+      <span class="kw">let</span> data = <span class="str">""</span>;
+      process.stdin.<span class="fn">on</span>(<span class="str">"data"</span>, chunk => data += chunk);
+      process.stdin.<span class="fn">on</span>(<span class="str">"end"</span>, () => <span class="fn">res</span>(data));
+    });
+  }
+
+  <span class="cmt">/* Extract the JSON from &lt;task-plan&gt; tags if present, otherwise parse directly */</span>
+  <span class="kw">const</span> match = input.<span class="fn">match</span>(/&lt;task-plan&gt;([\s\S]*?)&lt;\/task-plan&gt;/);
+  <span class="kw">const</span> json = match ? match[<span class="num">1</span>].<span class="fn">trim</span>() : input.<span class="fn">trim</span>();
+  <span class="kw">const</span> plan = <span class="fn">JSON.parse</span>(json);
+
+  <span class="kw">const</span> idMap = {}; <span class="cmt">// maps plan IDs to Notion page IDs</span>
+
+  <span class="cmt">/* Pass 1: create all top-level tasks */</span>
+  <span class="kw">for</span> (<span class="kw">const</span> task <span class="kw">of</span> plan.tasks) {
+    <span class="kw">const</span> pageId = <span class="kw">await</span> <span class="fn">createTask</span>({
+      title: task.title,
+      description: task.description,
+      status: <span class="str">"todo"</span>,
+      provider: task.provider,
+      priority: task.priority,
+      project: plan.project,
+      tags: task.tags,
+    });
+    idMap[task.id] = pageId;
+    console.<span class="fn">log</span>(<span class="str">`Created: <span class="var">${task.title}</span> (<span class="var">${pageId}</span>)`</span>);
+  }
+
+  <span class="cmt">/* Pass 2: create subtasks */</span>
+  <span class="kw">for</span> (<span class="kw">const</span> task <span class="kw">of</span> plan.tasks) {
+    <span class="kw">if</span> (!task.subtasks) <span class="kw">continue</span>;
+    <span class="kw">for</span> (<span class="kw">const</span> subtask <span class="kw">of</span> task.subtasks) {
+      <span class="kw">const</span> pageId = <span class="kw">await</span> <span class="fn">createSubtask</span>(idMap[task.id], {
+        title: subtask.title,
+        description: subtask.description,
+        status: <span class="str">"todo"</span>,
+        provider: subtask.provider,
+        priority: subtask.priority,
+        project: plan.project,
+      });
+      idMap[subtask.id] = pageId;
+      console.<span class="fn">log</span>(<span class="str">`  Subtask: <span class="var">${subtask.title}</span> (<span class="var">${pageId}</span>)`</span>);
+    }
+  }
+
+  <span class="cmt">/* Pass 3: create relations (blocked_by, related) */</span>
+  <span class="kw">for</span> (<span class="kw">const</span> task <span class="kw">of</span> plan.tasks) {
+    <span class="kw">if</span> (task.blocked_by) {
+      <span class="kw">for</span> (<span class="kw">const</span> blockerId <span class="kw">of</span> task.blocked_by) {
+        <span class="kw">if</span> (idMap[blockerId]) {
+          <span class="kw">await</span> <span class="fn">createRelation</span>(idMap[task.id], <span class="str">"Blocked By"</span>, idMap[blockerId]);
+          console.<span class="fn">log</span>(<span class="str">`  <span class="var">${task.id}</span> blocked by <span class="var">${blockerId}</span>`</span>);
+        }
+      }
+    }
+    <span class="kw">if</span> (task.related) {
+      <span class="kw">for</span> (<span class="kw">const</span> relatedId <span class="kw">of</span> task.related) {
+        <span class="kw">if</span> (idMap[relatedId]) {
+          <span class="kw">await</span> <span class="fn">createRelation</span>(idMap[task.id], <span class="str">"Related To"</span>, idMap[relatedId]);
+        }
+      }
+    }
+  }
+
+  console.<span class="fn">log</span>(<span class="str">`\nDone. Created <span class="var">${Object.keys(idMap).length}</span> tasks.`</span>);
+}
+
+<span class="fn">main</span>().<span class="fn">catch</span>(console.error);</code></pre>
+
+<h3>src/providers.js</h3>
+<pre><code><span class="kw">const</span> { spawn } = <span class="kw">require</span>(<span class="str">"child_process"</span>);
+<span class="kw">const</span> config = <span class="kw">require</span>(<span class="str">"../config.json"</span>);
+
+<span class="kw">function</span> <span class="fn">spawnAgent</span>(provider, prompt, cwd) {
+  <span class="kw">const</span> adapter = config.providers[provider];
+  <span class="kw">if</span> (!adapter) {
+    <span class="kw">throw new</span> <span class="fn">Error</span>(<span class="str">`Unknown provider: <span class="var">${provider}</span>`</span>);
+  }
+
+  <span class="kw">const</span> args = [
+    adapter.prompt_flag, prompt,
+    adapter.cwd_flag, cwd,
+    ...adapter.extra_args,
+  ];
+
+  console.<span class="fn">log</span>(<span class="str">`[dispatcher] Spawning <span class="var">${adapter.command}</span> <span class="var">${args.join</span>(<span class="str">" "</span>)}`</span>);
+
+  <span class="kw">const</span> child = <span class="fn">spawn</span>(adapter.command, args, {
+    cwd,
+    stdio: [<span class="str">"pipe"</span>, <span class="str">"pipe"</span>, <span class="str">"pipe"</span>],
+    env: { ...process.env },
+  });
+
+  <span class="kw">let</span> stdout = <span class="str">""</span>;
+  <span class="kw">let</span> stderr = <span class="str">""</span>;
+
+  child.stdout.<span class="fn">on</span>(<span class="str">"data"</span>, data => { stdout += data; });
+  child.stderr.<span class="fn">on</span>(<span class="str">"data"</span>, data => { stderr += data; });
+
+  <span class="kw">return new</span> <span class="fn">Promise</span>((resolve) => {
+    <span class="kw">const</span> timeout = <span class="fn">setTimeout</span>(() => {
+      child.<span class="fn">kill</span>(<span class="str">"SIGTERM"</span>);
+      <span class="fn">resolve</span>({ exitCode: <span class="num">-1</span>, stdout, stderr: stderr + <span class="str">"\n[timeout]"</span> });
+    }, adapter.timeout_seconds * <span class="num">1000</span>);
+
+    child.<span class="fn">on</span>(<span class="str">"close"</span>, (code) => {
+      <span class="fn">clearTimeout</span>(timeout);
+      <span class="fn">resolve</span>({ exitCode: code, stdout, stderr });
+    });
+  });
+}
+
+module.exports = { spawnAgent };</code></pre>
+
+<h3>src/poller.js</h3>
+<pre><code><span class="kw">const</span> {
+  queryInProgressUnassigned,
+  getTaskDescription,
+  markAssigned,
+  markComplete,
+  getBlockedByTasks,
+} = <span class="kw">require</span>(<span class="str">"./notion-client"</span>);
+<span class="kw">const</span> { spawnAgent } = <span class="kw">require</span>(<span class="str">"./providers"</span>);
+<span class="kw">const</span> config = <span class="kw">require</span>(<span class="str">"../config.json"</span>);
+
+<span class="kw">const</span> activeJobs = <span class="kw">new</span> <span class="fn">Set</span>();
+
+<span class="kw">async function</span> <span class="fn">tick</span>() {
+  <span class="kw">if</span> (activeJobs.size >= config.poll.max_concurrent) {
+    console.<span class="fn">log</span>(<span class="str">`[poller] Max concurrency reached (<span class="var">${activeJobs.size}</span>), skipping`</span>);
+    <span class="kw">return</span>;
+  }
+
+  <span class="kw">const</span> tasks = <span class="kw">await</span> <span class="fn">queryInProgressUnassigned</span>();
+  console.<span class="fn">log</span>(<span class="str">`[poller] Found <span class="var">${tasks.length}</span> tasks ready`</span>);
+
+  <span class="kw">for</span> (<span class="kw">const</span> task <span class="kw">of</span> tasks) {
+    <span class="kw">if</span> (activeJobs.size >= config.poll.max_concurrent) <span class="kw">break</span>;
+
+    <span class="cmt">/* Check dependencies */</span>
+    <span class="kw">const</span> blockers = <span class="kw">await</span> <span class="fn">getBlockedByTasks</span>(task.id);
+    <span class="kw">const</span> unresolved = blockers.<span class="fn">filter</span>(b => b.status !== <span class="str">"done"</span>);
+    <span class="kw">if</span> (unresolved.length > <span class="num">0</span>) {
+      console.<span class="fn">log</span>(<span class="str">`[poller] <span class="var">${task.id}</span> blocked by <span class="var">${unresolved.length}</span> unresolved tasks, skipping`</span>);
+      <span class="kw">continue</span>;
+    }
+
+    <span class="cmt">/* Read task details */</span>
+    <span class="kw">const</span> title = task.properties.Name.title[<span class="num">0</span>]?.plain_text || <span class="str">"Untitled"</span>;
+    <span class="kw">const</span> provider = task.properties.Provider.select?.name || config.default_provider;
+    <span class="kw">const</span> description = <span class="kw">await</span> <span class="fn">getTaskDescription</span>(task.id);
+    <span class="kw">const</span> prompt = description || title;
+
+    <span class="cmt">/* Mark as assigned (prevents double-dispatch) */</span>
+    <span class="kw">await</span> <span class="fn">markAssigned</span>(task.id);
+    activeJobs.<span class="fn">add</span>(task.id);
+
+    console.<span class="fn">log</span>(<span class="str">`[poller] Dispatching "<span class="var">${title}</span>" to <span class="var">${provider}</span>`</span>);
+
+    <span class="cmt">/* Spawn agent (async, non-blocking) */</span>
+    <span class="fn">spawnAgent</span>(provider, prompt, config.repo.path)
+      .<span class="fn">then</span>(({ exitCode, stdout, stderr }) => {
+        console.<span class="fn">log</span>(<span class="str">`[poller] Task <span class="var">${task.id}</span> finished with exit code <span class="var">${exitCode}</span>`</span>);
+        <span class="kw">return</span> <span class="fn">markComplete</span>(task.id, exitCode, stderr);
+      })
+      .<span class="fn">then</span>(() => {
+        activeJobs.<span class="fn">delete</span>(task.id);
+      })
+      .<span class="fn">catch</span>(err => {
+        console.<span class="fn">error</span>(<span class="str">`[poller] Error on task <span class="var">${task.id}</span>:`</span>, err);
+        activeJobs.<span class="fn">delete</span>(task.id);
+      });
+  }
+}
+
+<span class="kw">function</span> <span class="fn">start</span>() {
+  console.<span class="fn">log</span>(<span class="str">`[poller] Starting daemon. Poll interval: <span class="var">${config.poll.interval_seconds}</span>s, max concurrent: <span class="var">${config.poll.max_concurrent}</span>`</span>);
+  <span class="fn">tick</span>();
+  <span class="fn">setInterval</span>(tick, config.poll.interval_seconds * <span class="num">1000</span>);
+}
+
+<span class="fn">start</span>();</code></pre>
+
+<h3>scripts/populate-from-stdin.sh</h3>
+<pre><code><span class="cmt">#!/bin/bash</span>
+<span class="cmt"># Usage: echo '&lt;task-plan&gt;{...}&lt;/task-plan&gt;' | ./scripts/populate-from-stdin.sh</span>
+<span class="cmt"># Or:   claude -p "plan the auth system" | ./scripts/populate-from-stdin.sh</span>
+
+<span class="fn">node</span> src/populate.js</code></pre>
+
+<h3>scripts/start-poller.sh</h3>
+<pre><code><span class="cmt">#!/bin/bash</span>
+<span class="cmt"># Launch the poller daemon. Use with tmux/screen/launchd for persistence.</span>
+
+<span class="fn">node</span> src/poller.js 2&gt;&amp;1 | <span class="fn">tee</span> -a logs/poller.log</code></pre>
+
+<!-- ===================== LIMITATIONS ===================== -->
+<h2 id="limitations">11. Limitations &amp; Workarounds</h2>
+
+<table>
+  <tr>
+    <th>Limitation</th>
+    <th>Impact</th>
+    <th>Workaround</th>
+  </tr>
+  <tr>
+    <td>Notion has no webhooks for database changes</td>
+    <td>Can't get push notifications when a task moves to <code>in_progress</code></td>
+    <td>Poll every 30s (free, ~30s max delay). Acceptable for this workflow. Alternatively, use a Make.com/Zapier bridge that watches Notion and hits a local webhook, but that adds cost and complexity.</td>
+  </tr>
+  <tr>
+    <td>Notion API rate limit: ~3 req/s</td>
+    <td>Large task plans (50+ tasks) might hit rate limits during population</td>
+    <td>Add a small delay (350ms) between API calls in <code>populate.js</code>. The populator already handles this implicitly through async/await, but add an explicit sleep for safety.</td>
+  </tr>
+  <tr>
+    <td>Each provider CLI has different flags</td>
+    <td>Can't use a single command for all providers</td>
+    <td>The provider adapter map in <code>config.json</code> handles this. Each provider has its own command template. Adding a provider is a config change, not a code change.</td>
+  </tr>
+  <tr>
+    <td>Agent output may be very long</td>
+    <td>Notion page body has a 2000-char block limit</td>
+    <td>Truncate output to 2000 chars in <code>markComplete()</code> (already done in the code). For full logs, write to a local file and add a "see logs/task-<id>.log" note.</td>
+  </tr>
+  <tr>
+    <td>No guarantee the agent succeeds</td>
+    <td>Agent might produce broken code or fail to complete the task</td>
+    <td>On failure (exit code &ne; 0), the ticket goes back to <code>todo</code> with the error log attached. You can review, adjust the description, and move it back to <code>in_progress</code> to re-dispatch.</td>
+  </tr>
+  <tr>
+    <td>Concurrent agents might conflict</td>
+    <td>Two agents working on the same repo simultaneously might step on each other</td>
+    <td>Set <code>max_concurrent: 1</code> in config if this is a concern. Or use git branches per task (the dispatcher can create a branch before spawning the agent). This is a future enhancement.</td>
+  </tr>
+  <tr>
+    <td>Breakdown JSON must be well-formed</td>
+    <td>If the LLM produces malformed JSON, the populator fails</td>
+    <td>Wrap the JSON in <code>&lt;task-plan&gt;</code> tags for reliable extraction. Add a JSON validation step in <code>populate.js</code> with a helpful error message. Optionally, use a cheap LLM (Gemini Flash) as a fallback parser if direct JSON parsing fails.</td>
+  </tr>
+</table>
+
+<!-- ===================== CONFIG ===================== -->
+<h2 id="config">12. Configuration Reference</h2>
+
+<h3>Environment Variables (.env)</h3>
+<pre><code><span class="cmt"># Required</span>
+NOTION_TOKEN=secret_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+<span class="cmt"># Provider credentials (only for providers you use)</span>
+<span class="cmt"># Claude: uses your Claude subscription (claude CLI handles auth)</span>
+<span class="cmt"># Codex: uses your OpenAI API key (codex CLI handles auth)</span>
+<span class="cmt"># OpenCode: uses opencode.json config</span>
+<span class="cmt"># Grok: uses your Grok credentials</span>
+<span class="cmt"># Gemini: uses your Google AI credentials</span>
+
+<span class="cmt"># No additional env vars needed for Notion operations</span>
+<span class="cmt"># The Notion token is the only required secret</span></code></pre>
+
+<h3>config.json Fields</h3>
+<table>
+  <tr>
+    <th>Field</th>
+    <th>Default</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>notion.database_id</td>
+    <td>&mdash;</td>
+    <td>The Notion database ID (from the database URL)</td>
+  </tr>
+  <tr>
+    <td>notion.token_env</td>
+    <td>NOTION_TOKEN</td>
+    <td>Environment variable name that holds the Notion integration token</td>
+  </tr>
+  <tr>
+    <td>poll.interval_seconds</td>
+    <td>30</td>
+    <td>How often the poller checks Notion for in-progress tasks</td>
+  </tr>
+  <tr>
+    <td>poll.max_concurrent</td>
+    <td>3</td>
+    <td>Maximum number of agent subprocesses running simultaneously</td>
+  </tr>
+  <tr>
+    <td>repo.path</td>
+    <td>&mdash;</td>
+    <td>Absolute path to the repository where agents will work</td>
+  </tr>
+  <tr>
+    <td>providers.*</td>
+    <td>&mdash;</td>
+    <td>Per-provider CLI invocation config (command, flags, timeout)</td>
+  </tr>
+  <tr>
+    <td>default_provider</td>
+    <td>claude</td>
+    <td>Fallback provider if a task doesn't specify one</td>
+  </tr>
+</table>
+
+<!-- ===================== CHECKLIST ===================== -->
+<h2 id="checklist">13. Build Checklist</h2>
+
+<h4>Phase 1: Notion Setup</h4>
+<ul class="checklist">
+  <li>Create Notion integration &amp; get token</li>
+  <li>Create database with 14 properties</li>
+  <li>Share database with integration</li>
+  <li>Create database views (Kanban, Queue, Active, Review, Subtasks)</li>
+  <li>Copy database ID</li>
+</ul>
+
+<h4>Phase 2: Core Scripts</h4>
+<ul class="checklist">
+  <li>Initialize project (npm init, install @notionhq/client)</li>
+  <li>Create config.json with database ID &amp; provider adapters</li>
+  <li>Create .env with NOTION_TOKEN</li>
+  <li>Write notion-client.js (createTask, queryTasks, updateTask, relations)</li>
+  <li>Write populate.js (JSON &rarr; Notion pages)</li>
+  <li>Write providers.js (spawnAgent with adapter map)</li>
+  <li>Write poller.js (daemon loop with dependency checking)</li>
+  <li>Write helper scripts (start-poller.sh, populate-from-stdin.sh)</li>
+</ul>
+
+<h4>Phase 3: Testing</h4>
+<ul class="checklist">
+  <li>Test populate with sample JSON</li>
+  <li>Test poller picks up in-progress tasks</li>
+  <li>Test correct provider CLI is invoked</li>
+  <li>Test ticket status updates after agent completion</li>
+  <li>Test dependency blocking (task doesn't dispatch if blockers aren't done)</li>
+  <li>Test concurrency limits</li>
+  <li>Test failure path (agent exits nonzero &rarr; ticket back to todo)</li>
+</ul>
+
+<h4>Phase 4: Deployment</h4>
+<ul class="checklist">
+  <li>Set up daemon persistence (launchd/tmux)</li>
+  <li>Set up logging to file</li>
+  <li>Add breakdown prompt to your CLI's AGENTS.md or system prompt</li>
+  <li>Test end-to-end: type prompt &rarr; breakdown &rarr; populate &rarr; move to in_progress &rarr; agent dispatches &rarr; ticket updates</li>
+  <li>(Optional) Create a <code>kade</code> CLI wrapper for the full flow</li>
+</ul>
+
+<div class="divider"></div>
+
+<div class="callout">
+  <div class="callout-title">Summary</div>
+  <p>This system turns your CLI prompt into a full project management workflow in Notion, with automatic multi-provider dispatch, for $0 in token overhead. The only tokens you spend are on the initial breakdown (which you're already doing) and the actual task execution (which is the real work). All project management &mdash; ticket creation, status tracking, dependency management, state updates &mdash; runs on free Notion API calls from deterministic scripts.</p>
+</div>
+
+</div>
+</body>
+</html>
