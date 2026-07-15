@@ -8,14 +8,14 @@ test("buildArgs passes model flag for claude", () => {
       subcommand: [],
       prompt_flag: "-p",
       model_flag: "--model",
-      extra_args: ["--no-input"],
+      extra_args: ["--dangerously-skip-permissions"],
     },
     "do the thing",
     "/repo",
     "opus",
     "claude"
   );
-  assert.deepEqual(args, ["--model", "opus", "-p", "do the thing", "--no-input"]);
+  assert.deepEqual(args, ["--model", "opus", "-p", "do the thing", "--dangerously-skip-permissions"]);
 });
 
 test("buildArgs uses opencode run with model, dir, and --pure before the positional prompt", () => {

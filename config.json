@@ -22,7 +22,7 @@
       "model_flag": "--model",
       "prompt_as_positional": false,
       "timeout_seconds": 600,
-      "extra_args": ["--no-input"]
+      "extra_args": ["--dangerously-skip-permissions"]
     },
     "grok": {
       "command": "grok",
