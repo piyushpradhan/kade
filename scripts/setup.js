@@ -40,44 +40,9 @@ async function ask(label, { def, required, hint } = {}) {
   }
 }
 
-// Read a secret without echoing it to the terminal.
-function askSecret(label) {
-  return new Promise((res) => {
-    const stdin = process.stdin;
-    process.stdout.write(`${paint(c.cyan, "?")} ${label} ${paint(c.dim, "›")} `);
-    const wasRaw = stdin.isRaw;
-    rl.pause(); // stop readline from echoing the secret alongside our mask
-    if (stdin.isTTY) stdin.setRawMode(true);
-    stdin.resume(); // rl.pause() paused stdin — resume so keystrokes reach us
-    let buf = "";
-    const onData = (ch) => {
-      const s = ch.toString("utf8");
-      // A paste arrives as one chunk that may end in a newline — take the text
-      // before any CR/LF, then finish.
-      const nl = s.search(/[\r\n]/);
-      const chunk = nl === -1 ? s : s.slice(0, nl);
-      if (s === "\x03") process.exit(1); // ctrl-c
-      for (const cp of chunk) {
-        if (cp === "\x7f" || cp === "\b") {
-          if (buf.length) {
-            buf = buf.slice(0, -1);
-            process.stdout.write("\b \b");
-          }
-        } else if (cp >= " ") {
-          buf += cp;
-          process.stdout.write("*");
-        }
-      }
-      if (nl !== -1) {
-        if (stdin.isTTY) stdin.setRawMode(wasRaw);
-        stdin.removeListener("data", onData);
-        process.stdout.write("\n");
-        rl.resume();
-        res(buf.trim());
-      }
-    };
-    stdin.on("data", onData);
-  });
+// Prompt for the token. It echoes to the terminal like any other answer.
+async function askSecret(label) {
+  return (await question(`${paint(c.cyan, "?")} ${label} ${paint(c.dim, "›")} `)).trim();
 }
 
 // Accept a raw 32-char id, a hyphenated id, or a full Notion URL.
