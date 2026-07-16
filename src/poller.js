@@ -1,5 +1,7 @@
 const {
   queryInProgressUnassigned,
+  reclaimStale,
+  validateSchema,
   getTaskDescription,
   markAssigned,
   markComplete,
@@ -81,6 +83,12 @@ async function dispatchTask(task) {
 }
 
 async function tick() {
+  // P1: self-heal crash-stranded tasks before dispatching new ones.
+  const reclaimed = await reclaimStale(activeJobs);
+  if (reclaimed.length) {
+    logger.info(`[poller] reclaimed ${reclaimed.length} stale task(s) for re-dispatch`);
+  }
+
   if (activeJobs.size >= config.poll.max_concurrent) {
     logger.info(
       `[poller] Max concurrency reached (${activeJobs.size}), skipping`
@@ -98,6 +106,9 @@ async function tick() {
       logger.info(`[poller] concurrency cap hit, deferring remaining tasks`);
       break;
     }
+
+    // P5: skip anything already claimed by an overlapping tick.
+    if (activeJobs.has(task.id)) continue;
 
     const tag = shortId(task.id);
     const title = getTaskTitle(task);
@@ -117,11 +128,19 @@ async function tick() {
     if (blockers.length > 0) {
       logger.info(`[poller] [${tag}] all ${blockers.length} blocker(s) done, proceeding`);
     }
+    // P5: claim synchronously before the non-awaited spawn to close the window.
+    activeJobs.add(task.id);
     dispatchTask(task);
   }
 }
 
-function start() {
+async function start() {
+  try {
+    await validateSchema();
+  } catch (err) {
+    logger.error(err.message);
+    process.exit(1);
+  }
   logger.info(
     `[poller] Starting daemon. Poll interval: ${config.poll.interval_seconds}s, max concurrent: ${config.poll.max_concurrent}`
   );

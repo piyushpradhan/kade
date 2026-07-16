@@ -8,6 +8,7 @@ const {
   mapStatus,
   mapPriority,
   mapProjectStatus,
+  mapProjectPriority,
 } = require("../lib/schema");
 const { resolveModel, inferProvider } = require("../lib/models");
 const { stripAnsi, chunkText } = require("../lib/output");
@@ -19,9 +20,16 @@ const notion = new Client({
 
 const TASKS_DB = config.notion.tasks_database_id;
 const PROJECTS_DB = config.notion.projects_database_id;
-const SUCCESS_STATUS = config.notion.success_status || mapStatus("review");
+const SUCCESS_STATUS = config.notion.success_status || mapStatus("done");
 const FAILURE_STATUS = config.notion.failure_status || mapStatus("todo");
 const OUTPUT_MARKERS = new Set(["Output", "Error output"]);
+
+// A task Assigned longer than this with no live job is presumed crash-stranded.
+const LEASE_TIMEOUT_MS =
+  (config.poll.lease_timeout_seconds ||
+    Math.max(
+      ...Object.values(config.providers).map((p) => p.timeout_seconds || 600)
+    ) + 300) * 1000;
 
 function blockText(block) {
   const type = block.type;
@@ -90,7 +98,7 @@ async function createProject({ name, goal, status, priority }) {
           status: { name: mapProjectStatus(status || "planning") },
         },
         [PROJECT_PROPERTIES.priority]: {
-          select: { name: mapPriority(priority || "medium") },
+          select: { name: mapProjectPriority(priority || "medium") },
         },
         ...(goal && {
           [PROJECT_PROPERTIES.summary]: { rich_text: richText(goal) },
@@ -190,6 +198,105 @@ async function queryInProgressUnassigned() {
     })
   );
   return response.results;
+}
+
+// P1: crash recovery. Reset tasks that are In Progress + Assigned but have no live
+// job and whose lease has expired, so a future tick re-dispatches them.
+async function reclaimStale(activeJobIds) {
+  const response = await withRateLimit(() =>
+    notion.databases.query({
+      database_id: TASKS_DB,
+      filter: {
+        and: [
+          {
+            property: PROPERTIES.status,
+            status: { equals: mapStatus("in_progress") },
+          },
+          { property: PROPERTIES.assigned, checkbox: { equals: true } },
+        ],
+      },
+    })
+  );
+
+  const now = Date.now();
+  const reclaimed = [];
+  for (const task of response.results) {
+    if (activeJobIds.has(task.id)) continue;
+    const started = task.properties[PROPERTIES.startedAt]?.date?.start;
+    const age = started ? now - new Date(started).getTime() : Infinity;
+    if (age < LEASE_TIMEOUT_MS) continue;
+
+    await withRateLimit(() =>
+      notion.pages.update({
+        page_id: task.id,
+        properties: { [PROPERTIES.assigned]: { checkbox: false } },
+      })
+    );
+    reclaimed.push(task.id);
+    logger.warn(
+      `[notion] ${shortId(task.id)} lease expired (age ${Number.isFinite(age) ? Math.round(age / 1000) + "s" : "no Started At"}), reset Assigned=false for re-dispatch`
+    );
+  }
+  return reclaimed;
+}
+
+// P2: fail fast on schema drift before it corrupts a run.
+async function validateSchema() {
+  const errors = [];
+  const tasksDb = await withRateLimit(() =>
+    notion.databases.retrieve({ database_id: TASKS_DB })
+  );
+  const projectsDb = await withRateLimit(() =>
+    notion.databases.retrieve({ database_id: PROJECTS_DB })
+  );
+
+  const requireProps = (db, label, names) => {
+    for (const name of names) {
+      if (!db.properties[name]) errors.push(`${label} DB missing property "${name}"`);
+    }
+  };
+  requireProps(tasksDb, "Tasks", Object.values(PROPERTIES));
+  requireProps(projectsDb, "Projects", Object.values(PROJECT_PROPERTIES));
+
+  // Status is a `status`-type property; its options CANNOT be auto-created by the
+  // API, so missing options here 400 mid-run. select options (Priority/Provider/
+  // Model) auto-create on write, so we don't assert those.
+  // ponytail: validate status options only; selects self-heal on first write.
+  const statusOptions = (
+    tasksDb.properties[PROPERTIES.status]?.status?.options || []
+  ).map((o) => o.name);
+  const requiredStatuses = [
+    ...new Set(["Not Started", "In Progress", "Done", SUCCESS_STATUS, FAILURE_STATUS]),
+  ];
+  for (const s of requiredStatuses) {
+    if (!statusOptions.includes(s)) {
+      errors.push(
+        `Tasks Status missing option "${s}" (has: ${statusOptions.join(", ") || "none"})`
+      );
+    }
+  }
+
+  if (errors.length) {
+    throw new Error(
+      "Notion schema validation failed:\n  - " + errors.join("\n  - ")
+    );
+  }
+  logger.info("[notion] schema validation passed");
+}
+
+// P4: dedup for idempotent populate — find an existing task by title (+ project).
+async function findTaskByTitleAndProject(title, projectId) {
+  const filters = [{ property: PROPERTIES.title, title: { equals: title } }];
+  if (projectId) {
+    filters.push({ property: PROPERTIES.project, relation: { contains: projectId } });
+  }
+  const response = await withRateLimit(() =>
+    notion.databases.query({
+      database_id: TASKS_DB,
+      filter: filters.length > 1 ? { and: filters } : filters[0],
+    })
+  );
+  return response.results[0]?.id || null;
 }
 
 async function getTaskDescription(pageId) {
@@ -361,6 +468,10 @@ module.exports = {
   createProject,
   getOrCreateProject,
   queryInProgressUnassigned,
+  reclaimStale,
+  validateSchema,
+  findTaskByTitleAndProject,
+  LEASE_TIMEOUT_MS,
   getTaskDescription,
   markAssigned,
   markComplete,

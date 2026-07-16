@@ -8,13 +8,7 @@ Notion-driven AI task orchestration. Break prompts into structured tasks in Noti
 
 2. **Share databases** — Open your [KADE setup](https://www.notion.so/KADE-setup-4317db1ae37b83d4bbd781dc769ef881) page and invite the integration to both **Projects** and **Tasks** databases.
 
-3. **Add Status options** — In the Tasks database, edit the **Status** property and add:
-   - `Review` (for completed tasks awaiting human review)
-   - `Blocked` (optional, for blocked tasks)
-   
-   Also add `Urgent` to the **Priority** select if not present.
-
-4. **Configure environment**:
+3. **Configure environment**:
 
 ```bash
 cp .env.example .env
@@ -22,7 +16,9 @@ cp .env.example .env
 npm install
 ```
 
-5. **Edit `config.json`** — Set `repo.path` to the repository where agents should work.
+4. **Edit `config.json`** — Set `repo.path` to the repository where agents should work.
+
+On startup the poller validates the live Notion schema (property names + Status options) and exits with a clear diff if anything is missing.
 
 ## Usage
 
@@ -44,7 +40,7 @@ Or pipe JSON from your CLI session:
 ./scripts/start-poller.sh
 ```
 
-The poller watches for tasks with **Status = In Progress** and **Assigned = false**, then dispatches them to the configured provider CLI. On completion, status moves to **Review** (success) or back to **Not Started** (failure).
+The poller watches for tasks with **Status = In Progress** and **Assigned = false**, then dispatches them to the configured provider CLI. On completion, status moves to **Done** (success) or back to **Not Started** (failure), per `config.json`. If the poller crashes mid-run, stale tasks are automatically reclaimed and re-dispatched after the lease timeout.
 
 ## Workflow
 

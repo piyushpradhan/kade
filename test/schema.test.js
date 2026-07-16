@@ -4,6 +4,7 @@ const {
   mapStatus,
   mapPriority,
   mapProjectStatus,
+  mapProjectPriority,
   STATUS,
   PRIORITY,
 } = require("../lib/schema");
@@ -11,14 +12,27 @@ const {
 test("mapStatus converts plan values to Notion template options", () => {
   assert.equal(mapStatus("todo"), STATUS.todo);
   assert.equal(mapStatus("in_progress"), STATUS.in_progress);
-  assert.equal(mapStatus("review"), STATUS.review);
   assert.equal(mapStatus("done"), STATUS.done);
+  assert.equal(mapStatus("archived"), STATUS.archived);
+});
+
+test("STATUS has no phantom options absent from the live template", () => {
+  assert.deepEqual(
+    Object.values(STATUS).sort(),
+    ["Archived", "Done", "In Progress", "Not Started"]
+  );
 });
 
 test("mapPriority converts plan values", () => {
   assert.equal(mapPriority("urgent"), PRIORITY.urgent);
   assert.equal(mapPriority("high"), PRIORITY.high);
   assert.equal(mapPriority("medium"), PRIORITY.medium);
+});
+
+test("mapProjectPriority clamps Urgent to High (Projects has no Urgent)", () => {
+  assert.equal(mapProjectPriority("urgent"), PRIORITY.high);
+  assert.equal(mapProjectPriority("high"), PRIORITY.high);
+  assert.equal(mapProjectPriority("low"), PRIORITY.low);
 });
 
 test("mapProjectStatus converts project statuses", () => {

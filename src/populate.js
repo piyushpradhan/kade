@@ -3,6 +3,7 @@ const {
   createSubtask,
   createRelation,
   getOrCreateProject,
+  findTaskByTitleAndProject,
 } = require("./notion-client");
 const { PROPERTIES } = require("../lib/schema");
 const logger = require("../lib/logger");
@@ -43,6 +44,12 @@ async function main() {
   const idMap = {};
 
   for (const task of plan.tasks) {
+    const existing = await findTaskByTitleAndProject(task.title, projectId);
+    if (existing) {
+      idMap[task.id] = existing;
+      logger.info(`Skipped (exists): ${task.title} (${existing})`);
+      continue;
+    }
     const pageId = await createTask({
       title: task.title,
       description: task.description,
