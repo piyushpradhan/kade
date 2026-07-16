@@ -14,6 +14,7 @@
   "repo": {
     "path": "/Users/mediocre/projects/kade"
   },
+  "repos_root": "~/projects",
   "providers": {
     "claude": {
       "command": "claude",

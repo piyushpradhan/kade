@@ -4,6 +4,7 @@ When the user asks you to plan or break down a task, output a JSON block wrapped
 {
   "project": "Project name",
   "goal": "One-line goal description",
+  "repo": "https://github.com/you/telemetry",
   "tasks": [
     {
       "id": "t1",
@@ -43,6 +44,8 @@ When the user asks you to plan or break down a task, output a JSON block wrapped
 If `model` is set but `provider` is omitted, provider is inferred from the model id (e.g. `opencode-go/*` → opencode).
 
 **Priority options:** `urgent`, `high`, `medium`, `low`
+
+**`repo`** (optional): the repository each task runs in — a GitHub URL (cloned into `repos_root`) or an absolute local path. Set once at the plan level as the default; add `"repo"` to a task or subtask to override it. Omit to use the machine's `config.json` `repo.path`.
 
 After producing the plan, the user can pipe it to KADE:
 

@@ -43,6 +43,10 @@ async function main() {
 
   const idMap = {};
 
+  // Stamp each task's repo so the poller routes it to the right directory.
+  // Plan-level `repo` is the template default; a task's own `repo` overrides it.
+  const defaultRepo = plan.repo || null;
+
   for (const task of plan.tasks) {
     const existing = await findTaskByTitleAndProject(task.title, projectId);
     if (existing) {
@@ -59,6 +63,7 @@ async function main() {
       priority: task.priority,
       projectId,
       tags: task.tags,
+      repository: task.repo || defaultRepo,
     });
     idMap[task.id] = pageId;
     logger.info(`Created: ${task.title} (${pageId})`);
@@ -76,6 +81,7 @@ async function main() {
         priority: subtask.priority,
         projectId,
         tags: subtask.tags,
+        repository: subtask.repo || task.repo || defaultRepo,
       });
       idMap[subtask.id] = pageId;
       logger.info(`  Subtask: ${subtask.title} (${pageId})`);

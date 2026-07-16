@@ -8,17 +8,25 @@ Notion-driven AI task orchestration. Break prompts into structured tasks in Noti
 
 2. **Share databases** — Open your [KADE setup](https://www.notion.so/KADE-setup-4317db1ae37b83d4bbd781dc769ef881) page and invite the integration to both **Projects** and **Tasks** databases.
 
-3. **Configure environment**:
+3. **Run the guided setup**:
 
 ```bash
-cp .env.example .env
-# Edit .env with your NOTION_TOKEN
 npm install
+npm run setup
 ```
 
-4. **Edit `config.json`** — Set `repo.path` to the repository where agents should work.
+`npm run setup` prompts for your token, the two database ids (paste the id or the full Notion URL), and the working repo path, writes `.env` + `config.json`, then validates the live schema.
 
-On startup the poller validates the live Notion schema (property names + Status options) and exits with a clear diff if anything is missing.
+<details>
+<summary>Prefer to do it by hand?</summary>
+
+```bash
+cp .env.example .env   # set NOTION_TOKEN
+# then edit config.json: notion.tasks_database_id, notion.projects_database_id, repo.path
+```
+</details>
+
+On startup the poller also validates the live Notion schema (property names + Status options) and exits with a clear diff if anything is missing.
 
 ## Usage
 
@@ -59,12 +67,35 @@ Uses the standard Projects + Tasks template with KADE extensions on Tasks:
 |---|---|
 | Provider | Which CLI agent runs the task |
 | Model | Which model to pass to the CLI (`--model` / `-m`) |
+| Repository | Which repo/dir the task runs in (GitHub URL or path); blank = default |
 | Assigned | Prevents double-dispatch |
 | Blocked By / Related To | Task dependencies |
 | Started At / Completed on | Timestamps |
 | Exit Code / Error Log | Agent result tracking |
 
 Database IDs are configured in `config.json`.
+
+## One template per repo
+
+Each **KADE setup** page is a self-contained template for one repository. Duplicate the page per repo — the binding travels *in Notion*, so it works on any machine.
+
+**How a task finds its directory** (first match wins):
+
+1. The task's **Repository** field (per-task override — lets an agent work on another repo).
+2. The plan's `repo` (stamped onto every task by `populate.js`).
+3. `repo.path` in `config.json` (the machine's default).
+
+A **Repository** value can be a **GitHub URL** (`https://github.com/you/telemetry`) — cloned once into `repos_root/<name>` (default `~/projects`, set in `config.json`) — or an **absolute local path**, used as-is. The Tasks DB *description* (`repo=…`) documents the template's default for humans.
+
+**Install a new repo (no config editing):**
+
+1. Duplicate the KADE setup page.
+2. Set the default repo — put it in the plan's `repo`, or set the **Repository** field default on the duplicate's Task template.
+3. Share both databases with your integration.
+
+The poller **auto-discovers** every KADE "Tasks" database shared with the integration (one poller watches them all) and clones each repo on first run. Set `poll.discover: false` in `config.json` to watch only the configured DB.
+
+**Export / move machines:** nothing machine-specific lives in Notion — duplicate or share the page anywhere; the new machine only needs its own `repos_root`.
 
 ## Project structure
 

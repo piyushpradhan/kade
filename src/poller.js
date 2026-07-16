@@ -1,5 +1,6 @@
 const {
   queryInProgressUnassigned,
+  discoverTaskDatabases,
   reclaimStale,
   validateSchema,
   getTaskDescription,
@@ -10,9 +11,11 @@ const {
   getTaskProvider,
   getTaskModel,
   getResolvedModel,
+  getTaskRepository,
   mapStatus,
 } = require("./notion-client");
 const { spawnAgent } = require("./providers");
+const { resolveRepoDir } = require("../lib/repo");
 const config = require("../config.json");
 const logger = require("../lib/logger");
 
@@ -57,10 +60,16 @@ async function dispatchTask(task) {
   logger.info(`[poller] [${tag}] handing off to dispatcher`);
 
   try {
+    const cwd = resolveRepoDir(
+      getTaskRepository(task),
+      config.repos_root,
+      config.repo.path
+    );
+    logger.info(`[poller] [${tag}] working directory: ${cwd}`);
     const { exitCode, stdout, stderr } = await spawnAgent(
       provider,
       prompt,
-      config.repo.path,
+      cwd,
       model,
       tag
     );
@@ -82,11 +91,31 @@ async function dispatchTask(task) {
   }
 }
 
+// Every KADE Tasks DB this poller should watch: the configured one plus any
+// other templates shared with the integration (deduped). Discovery is
+// best-effort — a search failure still leaves the configured DB working.
+async function getTargetDatabases() {
+  const dbs = new Set([config.notion.tasks_database_id]);
+  if (config.poll.discover !== false) {
+    try {
+      for (const id of await discoverTaskDatabases()) dbs.add(id);
+    } catch (err) {
+      logger.warn(`[poller] template discovery failed (${err.message}); using configured DB only`);
+    }
+  }
+  return [...dbs];
+}
+
 async function tick() {
+  const targetDbs = await getTargetDatabases();
+
   // P1: self-heal crash-stranded tasks before dispatching new ones.
-  const reclaimed = await reclaimStale(activeJobs);
-  if (reclaimed.length) {
-    logger.info(`[poller] reclaimed ${reclaimed.length} stale task(s) for re-dispatch`);
+  let reclaimed = 0;
+  for (const db of targetDbs) {
+    reclaimed += (await reclaimStale(activeJobs, db)).length;
+  }
+  if (reclaimed) {
+    logger.info(`[poller] reclaimed ${reclaimed} stale task(s) for re-dispatch`);
   }
 
   if (activeJobs.size >= config.poll.max_concurrent) {
@@ -96,9 +125,12 @@ async function tick() {
     return;
   }
 
-  const tasks = await queryInProgressUnassigned();
+  const tasks = [];
+  for (const db of targetDbs) {
+    tasks.push(...(await queryInProgressUnassigned(db)));
+  }
   logger.info(
-    `[poller] tick: ${tasks.length} In-Progress + unassigned task(s) found, ${activeJobs.size} active job(s)`
+    `[poller] tick: ${tasks.length} In-Progress + unassigned task(s) across ${targetDbs.length} template(s), ${activeJobs.size} active job(s)`
   );
 
   for (const task of tasks) {

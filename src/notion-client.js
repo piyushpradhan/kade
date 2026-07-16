@@ -124,6 +124,7 @@ async function createTask({
   priority,
   projectId,
   tags,
+  repository,
 }) {
   const resolvedProvider =
     provider || inferProvider(model) || config.default_provider;
@@ -150,6 +151,9 @@ async function createTask({
           [PROPERTIES.tags]: {
             multi_select: tags.map((t) => ({ name: t })),
           },
+        }),
+        ...(repository && {
+          [PROPERTIES.repository]: { url: repository },
         }),
       },
       ...(description && { children: pageBlocks(description) }),
@@ -182,10 +186,10 @@ async function createRelation(pageId, propertyName, relatedPageId) {
   );
 }
 
-async function queryInProgressUnassigned() {
+async function queryInProgressUnassigned(dbId = TASKS_DB) {
   const response = await withRateLimit(() =>
     notion.databases.query({
-      database_id: TASKS_DB,
+      database_id: dbId,
       filter: {
         and: [
           {
@@ -202,10 +206,10 @@ async function queryInProgressUnassigned() {
 
 // P1: crash recovery. Reset tasks that are In Progress + Assigned but have no live
 // job and whose lease has expired, so a future tick re-dispatches them.
-async function reclaimStale(activeJobIds) {
+async function reclaimStale(activeJobIds, dbId = TASKS_DB) {
   const response = await withRateLimit(() =>
     notion.databases.query({
-      database_id: TASKS_DB,
+      database_id: dbId,
       filter: {
         and: [
           {
@@ -461,6 +465,41 @@ function getResolvedModel(task) {
   return resolveModel(provider, model);
 }
 
+// Per-task repo override — a GitHub URL or local path. Empty → poller falls back.
+function getTaskRepository(task) {
+  return task.properties[PROPERTIES.repository]?.url || null;
+}
+
+// Auto-discover every KADE "Tasks" database shared with this integration, so
+// adding a repo is just: duplicate the template + share it — no config editing.
+// A DB counts as KADE if it's titled "Tasks" and carries the marker properties.
+async function discoverTaskDatabases() {
+  const found = [];
+  let cursor;
+  do {
+    const res = await withRateLimit(() =>
+      notion.search({
+        filter: { value: "database", property: "object" },
+        start_cursor: cursor,
+      })
+    );
+    for (const db of res.results) {
+      const title = db.title?.[0]?.plain_text;
+      const props = db.properties || {};
+      if (
+        title === "Tasks" &&
+        props[PROPERTIES.provider] &&
+        props[PROPERTIES.assigned] &&
+        props[PROPERTIES.status]
+      ) {
+        found.push(db.id);
+      }
+    }
+    cursor = res.has_more ? res.next_cursor : undefined;
+  } while (cursor);
+  return found;
+}
+
 module.exports = {
   createTask,
   createSubtask,
@@ -468,6 +507,7 @@ module.exports = {
   createProject,
   getOrCreateProject,
   queryInProgressUnassigned,
+  discoverTaskDatabases,
   reclaimStale,
   validateSchema,
   findTaskByTitleAndProject,
@@ -480,6 +520,7 @@ module.exports = {
   getTaskProvider,
   getTaskModel,
   getResolvedModel,
+  getTaskRepository,
   PROPERTIES,
   mapStatus,
   isOutputMarker,
