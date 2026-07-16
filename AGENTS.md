@@ -45,7 +45,7 @@ If `model` is set but `provider` is omitted, provider is inferred from the model
 
 **Priority options:** `urgent`, `high`, `medium`, `low`
 
-**`repo`** (optional): the repository each task runs in — a GitHub URL (cloned into `repos_root`) or an absolute local path. Set once at the plan level as the default; add `"repo"` to a task or subtask to override it. Omit to use the machine's `config.json` `repo.path`.
+**`repo`** (optional): the repository the tasks run in — a GitHub URL (cloned into `repos_root`) or an absolute local path. Set it once at the **plan level**; `populate.js` stores it as the template default (in the Tasks DB description), not on each task. Add `"repo"` to a specific task or subtask only to override that one. Omit to use the machine's `config.json` `repo.path`.
 
 After producing the plan, the user can pipe it to KADE:
 

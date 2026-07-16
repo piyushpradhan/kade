@@ -4,6 +4,7 @@ const {
   createRelation,
   getOrCreateProject,
   findTaskByTitleAndProject,
+  setTemplateRepo,
 } = require("./notion-client");
 const { PROPERTIES } = require("../lib/schema");
 const logger = require("../lib/logger");
@@ -43,9 +44,12 @@ async function main() {
 
   const idMap = {};
 
-  // Stamp each task's repo so the poller routes it to the right directory.
-  // Plan-level `repo` is the template default; a task's own `repo` overrides it.
-  const defaultRepo = plan.repo || null;
+  // The repo is a template-level property: set it once in the Tasks DB, not on
+  // every task. A task's own `repo` is the rare per-task override.
+  if (plan.repo) {
+    await setTemplateRepo(plan.repo);
+    logger.info(`Template repo → ${plan.repo}`);
+  }
 
   for (const task of plan.tasks) {
     const existing = await findTaskByTitleAndProject(task.title, projectId);
@@ -63,7 +67,7 @@ async function main() {
       priority: task.priority,
       projectId,
       tags: task.tags,
-      repository: task.repo || defaultRepo,
+      repository: task.repo,
     });
     idMap[task.id] = pageId;
     logger.info(`Created: ${task.title} (${pageId})`);
@@ -81,7 +85,7 @@ async function main() {
         priority: subtask.priority,
         projectId,
         tags: subtask.tags,
-        repository: subtask.repo || task.repo || defaultRepo,
+        repository: subtask.repo || task.repo,
       });
       idMap[subtask.id] = pageId;
       logger.info(`  Subtask: ${subtask.title} (${pageId})`);

@@ -465,9 +465,40 @@ function getResolvedModel(task) {
   return resolveModel(provider, model);
 }
 
-// Per-task repo override — a GitHub URL or local path. Empty → poller falls back.
+// Per-task repo override — a GitHub URL or local path. Empty → template default.
 function getTaskRepository(task) {
   return task.properties[PROPERTIES.repository]?.url || null;
+}
+
+// A template's default repo lives once in its Tasks DB description as `repo=<url>`.
+// Read it per database (cached — the binding is static for the process's life).
+const repoCache = new Map();
+
+function parseRepoFromDescription(description) {
+  const text = (description || []).map((t) => t.plain_text).join("");
+  const m = text.match(/repo=(\S+)/);
+  return m ? m[1] : null;
+}
+
+async function getDataSourceRepo(dbId) {
+  if (repoCache.has(dbId)) return repoCache.get(dbId);
+  const db = await withRateLimit(() =>
+    notion.databases.retrieve({ database_id: dbId })
+  );
+  const repo = parseRepoFromDescription(db.description);
+  repoCache.set(dbId, repo);
+  return repo;
+}
+
+// Set the template default once (in the configured Tasks DB description).
+async function setTemplateRepo(repo) {
+  await withRateLimit(() =>
+    notion.databases.update({
+      database_id: TASKS_DB,
+      description: richText(`repo=${repo}`),
+    })
+  );
+  repoCache.set(TASKS_DB, repo);
 }
 
 // Auto-discover every KADE "Tasks" database shared with this integration, so
@@ -521,6 +552,8 @@ module.exports = {
   getTaskModel,
   getResolvedModel,
   getTaskRepository,
+  getDataSourceRepo,
+  setTemplateRepo,
   PROPERTIES,
   mapStatus,
   isOutputMarker,

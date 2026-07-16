@@ -12,6 +12,7 @@ const {
   getTaskModel,
   getResolvedModel,
   getTaskRepository,
+  getDataSourceRepo,
   mapStatus,
 } = require("./notion-client");
 const { spawnAgent } = require("./providers");
@@ -60,8 +61,12 @@ async function dispatchTask(task) {
   logger.info(`[poller] [${tag}] handing off to dispatcher`);
 
   try {
+    // Repo: per-task override → the task's template default (DB description) →
+    // the machine default in config. Resolved to a dir (cloned if a URL).
+    const dbId = task.parent?.database_id;
+    const templateRepo = dbId ? await getDataSourceRepo(dbId) : null;
     const cwd = resolveRepoDir(
-      getTaskRepository(task),
+      getTaskRepository(task) || templateRepo,
       config.repos_root,
       config.repo.path
     );

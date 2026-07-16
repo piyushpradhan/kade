@@ -81,16 +81,16 @@ Each **KADE setup** page is a self-contained template for one repository. Duplic
 
 **How a task finds its directory** (first match wins):
 
-1. The task's **Repository** field (per-task override — lets an agent work on another repo).
-2. The plan's `repo` (stamped onto every task by `populate.js`).
-3. `repo.path` in `config.json` (the machine's default).
+1. The task's **Repository** field — optional per-task override, blank by default (lets an agent work on another repo).
+2. The **template default**, stored once in the **Tasks DB description** as `repo=<url>` and read once per database.
+3. `repo.path` in `config.json` (the machine's default / fallback).
 
-A **Repository** value can be a **GitHub URL** (`https://github.com/you/telemetry`) — cloned once into `repos_root/<name>` (default `~/projects`, set in `config.json`) — or an **absolute local path**, used as-is. The Tasks DB *description* (`repo=…`) documents the template's default for humans.
+A repo value can be a **GitHub URL** (`https://github.com/you/telemetry`) — cloned once into `repos_root/<name>` (default `~/projects`, set in `config.json`) — or an **absolute local path**, used as-is. The repo lives at the *template* level, so it isn't repeated on every task.
 
 **Install a new repo (no config editing):**
 
 1. Duplicate the KADE setup page.
-2. Set the default repo — put it in the plan's `repo`, or set the **Repository** field default on the duplicate's Task template.
+2. Set the default repo **once** — edit the Tasks DB description to `repo=<url>`, or put `repo` in your plan (`populate.js` writes it to the description for you).
 3. Share both databases with your integration.
 
 The poller **auto-discovers** every KADE "Tasks" database shared with the integration (one poller watches them all) and clones each repo on first run. Set `poll.discover: false` in `config.json` to watch only the configured DB.
