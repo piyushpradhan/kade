@@ -6,7 +6,7 @@ Notion-driven AI task orchestration. Break prompts into structured tasks in Noti
 
 1. **Notion integration** — Create at [notion.so/my-integrations](https://www.notion.so/my-integrations) and copy the token.
 
-2. **Share databases** — Open your [KADE setup](https://www.notion.so/KADE-setup-4317db1ae37b83d4bbd781dc769ef881) page and invite the integration to both **Projects** and **Tasks** databases.
+2. **Share databases** — Open your [KADE setup](https://descriptive-tomato-e8d.notion.site/KADE-Workspace-Template-39f7db1ae37b80f3a84ff22c7d37c46f?source=copy_link) page and invite the integration to both **Projects** and **Tasks** databases.
 
 3. **Run the guided setup**:
 

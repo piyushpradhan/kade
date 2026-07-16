@@ -46,25 +46,33 @@ function askSecret(label) {
     const stdin = process.stdin;
     process.stdout.write(`${paint(c.cyan, "?")} ${label} ${paint(c.dim, "›")} `);
     const wasRaw = stdin.isRaw;
+    rl.pause(); // stop readline from echoing the secret alongside our mask
     if (stdin.isTTY) stdin.setRawMode(true);
     let buf = "";
     const onData = (ch) => {
       const s = ch.toString("utf8");
-      if (s === "\r" || s === "\n") {
+      // A paste arrives as one chunk that may end in a newline — take the text
+      // before any CR/LF, then finish.
+      const nl = s.search(/[\r\n]/);
+      const chunk = nl === -1 ? s : s.slice(0, nl);
+      if (s === "\x03") process.exit(1); // ctrl-c
+      for (const cp of chunk) {
+        if (cp === "\x7f" || cp === "\b") {
+          if (buf.length) {
+            buf = buf.slice(0, -1);
+            process.stdout.write("\b \b");
+          }
+        } else if (cp >= " ") {
+          buf += cp;
+          process.stdout.write("*");
+        }
+      }
+      if (nl !== -1) {
         if (stdin.isTTY) stdin.setRawMode(wasRaw);
         stdin.removeListener("data", onData);
         process.stdout.write("\n");
+        rl.resume();
         res(buf.trim());
-      } else if (s === "\x03") {
-        process.exit(1); // ctrl-c
-      } else if (s === "\x7f" || s === "\b") {
-        if (buf.length) {
-          buf = buf.slice(0, -1);
-          process.stdout.write("\b \b");
-        }
-      } else if (s >= " ") {
-        buf += s;
-        process.stdout.write("*");
       }
     };
     stdin.on("data", onData);
