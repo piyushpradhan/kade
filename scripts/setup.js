@@ -48,6 +48,7 @@ function askSecret(label) {
     const wasRaw = stdin.isRaw;
     rl.pause(); // stop readline from echoing the secret alongside our mask
     if (stdin.isTTY) stdin.setRawMode(true);
+    stdin.resume(); // rl.pause() paused stdin — resume so keystrokes reach us
     let buf = "";
     const onData = (ch) => {
       const s = ch.toString("utf8");
