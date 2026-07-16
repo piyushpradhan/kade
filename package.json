@@ -4,6 +4,7 @@
   "description": "Notion-driven AI task orchestration — populate tasks from JSON and auto-dispatch to provider CLIs",
   "main": "src/poller.js",
   "scripts": {
+    "setup": "node scripts/setup.js",
     "populate": "node src/populate.js",
     "poller": "node src/poller.js",
     "test": "node --test test/*.test.js"
