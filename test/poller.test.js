@@ -161,3 +161,22 @@ test("successful run without a plan block creates nothing", async () => {
   assert.equal(calls.createSubtask.length, 0);
   assert.equal(calls.createTask.length, 0);
 });
+
+test("successful run ending in <needs-decision> parks instead of completing", async () => {
+  reset();
+  spawnResult = {
+    exitCode: 0,
+    stdout:
+      "I need a choice.\n<needs-decision>\nDeploy where?\n\n1. Production\n2. Staging\n</needs-decision>",
+    stderr: "",
+  };
+
+  await dispatchTask(fakeTask);
+
+  assert.equal(calls.markComplete.length, 0, "must not mark Done when parked");
+  assert.equal(calls.markNeedsDecision.length, 1);
+  assert.match(calls.markNeedsDecision[0].question, /Deploy where/);
+  assert.equal(calls.markNeedsDecision[0].id, "task-1");
+  // Follow-ups wait until the human answers and the run actually finishes.
+  assert.equal(calls.createSubtask.length, 0);
+});

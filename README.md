@@ -69,6 +69,22 @@ A dispatched agent isn't limited to its own run. Every prompt carries a short KA
 
 Set `orchestration.enabled: false` in `config.json` to turn the whole loop off (plain one-shot dispatch).
 
+### Human decisions (In Review)
+
+When an agent can't proceed without a choice only a human can make, it ends with a `<needs-decision>` block. KADE parks the ticket instead of marking it Done:
+
+1. **Status** → **In Review**
+2. The page body opens with a harness-style prompt (yellow callout + question + numbered options + how to answer) — the same content you'd see if Claude Code or OpenCode had paused for input
+3. Agent narrative is written underneath as **Output** (context, not the ask)
+4. A page comment notifies you of the question
+
+**How to answer:**
+
+1. Type your choice in the **Decision** property at the top of the page (recommended), *or* reply in a page comment
+2. Set **Status** → **In Progress**
+
+The poller resumes the **same provider session** with your answer (no re-run from scratch). Add a `Decision` rich-text property on the Tasks database if your template doesn't have one yet — without it, comments alone still work.
+
 ## Workflow
 
 1. Ask your CLI agent to plan a task (see `AGENTS.md` for the JSON format)
@@ -112,6 +128,7 @@ Uses the standard Projects + Tasks template with KADE extensions on Tasks:
 | Blocked By / Related To | Task dependencies |
 | Started At / Completed on | Timestamps |
 | Exit Code / Error Log | Agent result tracking |
+| Decision | Human answer when a task is parked **In Review** (optional; comments work without it) |
 
 Database IDs are configured in `config.json`.
 

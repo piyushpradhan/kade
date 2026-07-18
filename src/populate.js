@@ -7,9 +7,12 @@ const {
   setTemplateRepo,
   resolveTemplate,
   useTemplate,
+  getRepositoryDefaultLocation,
 } = require("./notion-client");
 const { PROPERTIES } = require("../lib/schema");
 const { parsePlan, relationWrites } = require("../lib/plan");
+const { isRepoName } = require("../lib/repo");
+const config = require("../config.json");
 const logger = require("../lib/logger");
 
 // argv: [--template <name>] [plan.json]. Flag picks which discovered template
@@ -62,10 +65,24 @@ async function applyPlan(plan, {
   }
 
   // The repo is a template-level property: set it once in the Tasks DB, not on
-  // every task. A task's own `repo` is the rare per-task override.
+  // every task. A task's own `repo` is the rare per-task override. If the value
+  // is a bare name (not a URL, not a path) and a Repositories DB is configured,
+  // resolve it through there first — the "Default Location" property may be a
+  // URL or a local path.
   if (plan.repo) {
-    await setTemplateRepo(plan.repo, tasksDbId);
-    logger.info(`Template repo → ${plan.repo}`);
+    let repo = plan.repo;
+    if (isRepoName(repo) && config.notion.repositories_database_id) {
+      const resolved = await getRepositoryDefaultLocation(
+        repo,
+        config.notion.repositories_database_id
+      );
+      if (resolved) {
+        logger.info(`Repository "${repo}" → Default Location "${resolved}"`);
+        repo = resolved;
+      }
+    }
+    await setTemplateRepo(repo, tasksDbId);
+    logger.info(`Template repo → ${repo}`);
   }
 
   const idMap = {};

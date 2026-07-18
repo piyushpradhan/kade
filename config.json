@@ -2,6 +2,7 @@
   "notion": {
     "tasks_database_id": "b047db1a-e37b-83ad-b6d8-81e106a639a0",
     "projects_database_id": "07e7db1a-e37b-830a-b407-81f070c0596b",
+    "repositories_database_id": null,
     "token_env": "NOTION_TOKEN",
     "success_status": "Done",
     "failure_status": "Not Started",
@@ -90,5 +91,12 @@
       "extra_args": []
     }
   },
-  "default_provider": "claude"
+  "default_provider": "claude",
+  "provider_icons": {
+    "claude": "🧠",
+    "grok": "🤖",
+    "opencode": "💻",
+    "codex": "🤖",
+    "gemini": "✨"
+  }
 }

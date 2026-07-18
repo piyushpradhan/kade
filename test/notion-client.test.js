@@ -27,9 +27,10 @@ function paragraph(text) {
   return { type: "paragraph", paragraph: { rich_text: [{ plain_text: text }] } };
 }
 
-test("isOutputMarker flags kade-appended Output / Error output headings", () => {
+test("isOutputMarker flags kade-appended Output / Error output / Decision headings", () => {
   assert.equal(isOutputMarker(heading3("Output")), true);
   assert.equal(isOutputMarker(heading3("Error output")), true);
+  assert.equal(isOutputMarker(heading3("Decision needed")), true);
   assert.equal(isOutputMarker(heading3("Output ")), true);
   assert.equal(isOutputMarker(heading3("Summary")), false);
   assert.equal(isOutputMarker(paragraph("Output")), false);

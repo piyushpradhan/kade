@@ -11,7 +11,14 @@ const {
   mapProjectPriority,
 } = require("../lib/schema");
 const { resolveModel, inferProvider } = require("../lib/models");
+const { resolveProviderIcon } = require("../lib/icon");
 const { stripAnsi, chunkText, mdToBlocks, stripControlBlocks } = require("../lib/output");
+const {
+  DECISION_MARKER,
+  DECISION_COMMENT_PREFIX,
+  buildDecisionBlocks,
+  formatDecisionComment,
+} = require("../lib/decision");
 const logger = require("../lib/logger");
 
 const notion = new Client({
@@ -25,11 +32,11 @@ let PROJECTS_DB = config.notion.projects_database_id;
 const SUCCESS_STATUS = config.notion.success_status || mapStatus("done");
 const FAILURE_STATUS = config.notion.failure_status || mapStatus("todo");
 const REVIEW_STATUS = config.notion.review_status || mapStatus("review");
-const DECISION_MARKER = "Decision needed";
 // "Decision needed" is a marker too, so getTaskDescription/clearPriorOutput
 // treat the parked-decision section as KADE-written output.
 const OUTPUT_MARKERS = new Set(["Output", "Error output", DECISION_MARKER]);
-const DECISION_COMMENT_PREFIX = "KADE needs a decision:";
+// Set by validateSchema when the optional Decision rich_text property exists.
+let HAS_DECISION_PROP = false;
 
 // A task Assigned longer than this with no live job is presumed crash-stranded.
 const LEASE_TIMEOUT_MS =
@@ -221,11 +228,13 @@ async function createTask(
   const resolvedProvider =
     provider || inferProvider(model) || config.default_provider;
   const resolvedModel = resolveModel(resolvedProvider, model);
+  const icon = resolveProviderIcon(resolvedProvider);
 
   const page = await api(
     () =>
       notion.pages.create({
         parent: { database_id: dbId },
+        ...(icon && { icon }),
         properties: {
           [PROPERTIES.title]: { title: richText(title) },
           [PROPERTIES.status]: { status: { name: mapStatus(status || "todo") } },
@@ -412,12 +421,44 @@ async function validateSchema() {
     }
   }
 
+  // Decision rich_text: humans type their answer here when a task is In Review.
+  // Auto-create when missing so the harness-style UX works without manual setup.
+  // Wrong type → warn and fall back to page comments only.
+  const decisionProp = tasksDb.properties[PROPERTIES.decision];
+  HAS_DECISION_PROP = decisionProp?.type === "rich_text";
+  if (decisionProp && !HAS_DECISION_PROP) {
+    logger.warn(
+      `[notion] Tasks property "${PROPERTIES.decision}" exists but is type "${decisionProp.type}" (want rich_text) — comment fallback only`
+    );
+  } else if (!decisionProp) {
+    try {
+      await api(
+        () =>
+          notion.databases.update({
+            database_id: TASKS_DB,
+            properties: { [PROPERTIES.decision]: { rich_text: {} } },
+          }),
+        "validateSchema:ensureDecision"
+      );
+      HAS_DECISION_PROP = true;
+      logger.info(
+        `[notion] added "${PROPERTIES.decision}" rich_text property to Tasks DB (for In Review answers)`
+      );
+    } catch (err) {
+      logger.warn(
+        `[notion] could not add "${PROPERTIES.decision}" property (${err.message}) — decision replies use page comments only`
+      );
+    }
+  }
+
   if (errors.length) {
     throw new Error(
       "Notion schema validation failed:\n  - " + errors.join("\n  - ")
     );
   }
-  logger.info("[notion] schema validation passed");
+  logger.info(
+    `[notion] schema validation passed${HAS_DECISION_PROP ? " (Decision property available)" : ""}`
+  );
 }
 
 // P4: dedup for idempotent populate — find an existing task by title (+ project).
@@ -609,6 +650,14 @@ async function appendOutputBlocks(pageId, output, success) {
   logger.info(`[notion] ${shortId(pageId)} output blocks written`);
 }
 
+// Clear the Decision property so a new park starts blank and a completed task
+// doesn't keep a stale answer. No-op when the template has no Decision property.
+// Defined above markComplete / markNeedsDecision so both can call it.
+function decisionClearProps() {
+  if (!HAS_DECISION_PROP) return {};
+  return { [PROPERTIES.decision]: { rich_text: [] } };
+}
+
 async function markComplete(pageId, exitCode, stdout = "", stderr = "") {
   const success = exitCode === 0;
   const tag = shortId(pageId);
@@ -623,6 +672,8 @@ async function markComplete(pageId, exitCode, stdout = "", stderr = "") {
     [PROPERTIES.assigned]: { checkbox: false },
     [PROPERTIES.completedAt]: { date: { start: new Date().toISOString() } },
     [PROPERTIES.exitCode]: { number: exitCode },
+    // Drop any parked answer so the property is clean for a future re-run.
+    ...decisionClearProps(),
   };
 
   if (!success && stderr) {
@@ -659,28 +710,15 @@ async function markComplete(pageId, exitCode, stdout = "", stderr = "") {
 
 // --- Decision gating (park → resume) ----------------------------------------
 // When an agent ends its run with a <needs-decision> block it can't proceed
-// without a human. Instead of marking Done, park the task in the Review status
-// with the question, and post it as a comment so the human can reply. The task
-// keeps its page id as the provider session id, so a later resume continues the
-// same conversation. See poller.dispatchTask for the resume half.
+// without a human. Instead of marking Done, park the task in In Review with a
+// harness-style prompt on the page body (question + options + how to answer),
+// clear the Decision property for a fresh answer, and post a notification
+// comment. The task keeps its page id as the provider session id so a later
+// resume continues the same conversation. See poller.dispatchTask for resume.
 async function appendDecisionBlocks(pageId, question) {
-  const blocks = [
-    {
-      object: "block",
-      type: "heading_3",
-      heading_3: { rich_text: richText(DECISION_MARKER) },
-    },
-    ...mdToBlocks(stripAnsi(question).trim()),
-    {
-      object: "block",
-      type: "paragraph",
-      paragraph: {
-        rich_text: richText(
-          "↳ Reply in a comment with your decision, then set Status → In Progress to continue this session."
-        ),
-      },
-    },
-  ];
+  const blocks = buildDecisionBlocks(stripAnsi(question).trim(), {
+    hasDecisionProp: HAS_DECISION_PROP,
+  });
   for (let i = 0; i < blocks.length; i += 100) {
     await api(
       () => notion.blocks.children.append({ block_id: pageId, children: blocks.slice(i, i + 100) }),
@@ -708,6 +746,8 @@ async function markNeedsDecision(pageId, question, output = "") {
           [PROPERTIES.assigned]: { checkbox: false },
           [PROPERTIES.completedAt]: { date: { start: new Date().toISOString() } },
           [PROPERTIES.exitCode]: { number: 0 },
+          // Blank the answer field so the human fills it for this round.
+          ...decisionClearProps(),
         },
       }),
     "markNeedsDecision:properties"
@@ -718,10 +758,12 @@ async function markNeedsDecision(pageId, question, output = "") {
   } catch (err) {
     logger.warn(`[notion] ${tag} could not clear prior output: ${err.message}`);
   }
-  if (output && stripAnsi(output).trim()) await appendOutputBlocks(pageId, output, true);
+  // Decision section FIRST so opening an In Review page shows the harness
+  // prompt above any agent narrative; output is context underneath.
   await appendDecisionBlocks(pageId, question);
+  if (output && stripAnsi(output).trim()) await appendOutputBlocks(pageId, output, true);
   try {
-    await postComment(pageId, `${DECISION_COMMENT_PREFIX}\n${stripAnsi(question).trim()}`);
+    await postComment(pageId, formatDecisionComment(stripAnsi(question).trim()));
   } catch (err) {
     logger.warn(`[notion] ${tag} could not post decision comment: ${err.message}`);
   }
@@ -742,12 +784,33 @@ function wasCompleted(task) {
   return !!task.properties?.[PROPERTIES.completedAt]?.date?.start;
 }
 
-// The human's decision is the most recent comment that isn't KADE's own
-// question. Empty when they flipped the status without answering.
+// Prefer the Decision property (top of the page — harness-like), then the most
+// recent page comment that isn't KADE's own question. Empty when they flipped
+// Status without answering. Always attempts the property (even if schema
+// validation didn't see it on the primary DB — multi-template safe).
 async function getDecisionReply(pageId) {
+  try {
+    const page = await api(
+      () => notion.pages.retrieve({ page_id: pageId }),
+      "getDecisionReply:property"
+    );
+    const prop = page.properties?.[PROPERTIES.decision];
+    if (prop) {
+      const text = (prop.rich_text || []).map((t) => t.plain_text).join("").trim();
+      if (text) return text;
+      // Property exists on this template — prefer it for future clear/writes
+      // even when the primary DB lacked it at startup.
+      HAS_DECISION_PROP = true;
+    }
+  } catch (err) {
+    logger.warn(
+      `[notion] ${shortId(pageId)} could not read Decision property: ${err.message}`
+    );
+  }
+
   const comments = await paginate(
     (cursor) => notion.comments.list({ block_id: pageId, start_cursor: cursor }),
-    "getDecisionReply"
+    "getDecisionReply:comments"
   );
   for (let i = comments.length - 1; i >= 0; i--) {
     const text = (comments[i].rich_text || []).map((t) => t.plain_text).join("").trim();
@@ -832,6 +895,44 @@ async function setTemplateRepo(repo, dbId = TASKS_DB) {
     "setTemplateRepo"
   );
   repoCache.set(dbId, repo);
+}
+
+// Query the Repositories database for a page by title.
+// Returns the full page object or null if not found.
+async function findRepositoryByName(name, dbId) {
+  if (!dbId || !name) return null;
+  const response = await api(
+    () =>
+      notion.databases.query({
+        database_id: dbId,
+        filter: {
+          property: PROPERTIES.title,
+          title: { equals: name },
+        },
+      }),
+    "findRepositoryByName"
+  );
+  return response.results[0] || null;
+}
+
+// Read the "Default Location" property from a repository page. Supports both
+// rich_text (path or URL as text) and url property types. Returns null when the
+// DB is not configured or no matching page is found.
+async function getRepositoryDefaultLocation(name, dbId) {
+  if (!dbId || !name) return null;
+  const page = await findRepositoryByName(name, dbId);
+  if (!page) return null;
+  const props = page.properties || {};
+  const prop = props[PROPERTIES.defaultLocation];
+  if (!prop) return null;
+  // rich_text ("Default Location" as text — can hold URL or path)
+  if (prop.rich_text) {
+    const text = prop.rich_text.map((t) => t.plain_text).join("").trim();
+    if (text) return text;
+  }
+  // url fallback
+  if (prop.url) return prop.url || null;
+  return null;
 }
 
 // Normalized DB title: join every rich-text segment and trim. Notion lets a
@@ -986,6 +1087,8 @@ module.exports = {
   getTaskProjectDir,
   getDataSourceRepo,
   setTemplateRepo,
+  findRepositoryByName,
+  getRepositoryDefaultLocation,
   PROPERTIES,
   mapStatus,
   isOutputMarker,

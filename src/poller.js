@@ -19,6 +19,7 @@ const {
   getTaskRepository,
   getTaskProjectDir,
   getDataSourceRepo,
+  getRepositoryDefaultLocation,
   countProjectTasks,
   hasOpenProjectTasks,
   setProjectStatus,
@@ -27,7 +28,7 @@ const {
 } = require("./notion-client");
 const { spawnAgent, killAllChildren } = require("./providers");
 const { applyPlan } = require("./populate");
-const { resolveWorkingDir } = require("../lib/repo");
+const { resolveWorkingDir, isRepoName } = require("../lib/repo");
 const {
   extractPlan,
   extractDecision,
@@ -208,14 +209,39 @@ async function dispatchTask(task) {
 
   try {
     // Working dir: Project Directory (local, used as-is) → Repository (GitHub
-    // URL, cloned) → the task's template default (DB description) → the machine
-    // default in config.
+    // URL, cloned) → the task's template default (DB description) → lookup
+    // through the Repositories database if the value is a bare name → the
+    // machine default in config.
     const dbId = task.parent?.database_id;
-    const templateRepo = dbId ? await getDataSourceRepo(dbId) : null;
+    const reposDbId = config.notion.repositories_database_id;
+    let templateRepo = dbId ? await getDataSourceRepo(dbId) : null;
+    let repository = getTaskRepository(task);
+
+    // Resolve bare names through the Repositories database: when the Repository
+    // URL or template default is not a URL and not a path, it may be a page
+    // name in the Repositories DB whose "Default Location" holds the real URL
+    // or path. Only runs when the DB is configured.
+    if (reposDbId) {
+      if (repository && isRepoName(repository)) {
+        const resolved = await getRepositoryDefaultLocation(repository, reposDbId);
+        if (resolved) {
+          logger.info(`[poller] [${tag}] Repository "${repository}" → Default Location "${resolved}"`);
+          repository = resolved;
+        }
+      }
+      if (templateRepo && isRepoName(templateRepo)) {
+        const resolved = await getRepositoryDefaultLocation(templateRepo, reposDbId);
+        if (resolved) {
+          logger.info(`[poller] [${tag}] template repo "${templateRepo}" → Default Location "${resolved}"`);
+          templateRepo = resolved;
+        }
+      }
+    }
+
     const cwd = resolveWorkingDir(
       {
         projectDir: getTaskProjectDir(task),
-        repository: getTaskRepository(task),
+        repository,
         templateRepo,
       },
       config.repos_root,

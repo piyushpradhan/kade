@@ -45,9 +45,9 @@ If `model` is set but `provider` is omitted, provider is inferred from the model
 
 **Priority options:** `urgent`, `high`, `medium`, `low`
 
-**`repo`** (optional): the repository the tasks run in — a GitHub URL (cloned into `repos_root`) or an absolute local path. Set it once at the **plan level**; `populate.js` stores it as the template default (in the Tasks DB description), not on each task. Add `"repo"` to a specific task or subtask only to override that one. Omit to use the machine's `config.json` `repo.path`.
+**`repo`** (optional): the repository the tasks run in — a GitHub URL (cloned into `repos_root`), an absolute local path, or a bare name that references a page in the **Repositories** database whose **Default Location** property holds the real URL or path. Set it once at the **plan level**; `populate.js` stores it as the template default (in the Tasks DB description), not on each task. Add `"repo"` to a specific task or subtask only to override that one. Omit to use the machine's `config.json` `repo.path`.
 
-**`project_dir`** (optional, per task): an existing local directory the agent runs in **as-is** — never cloned. It maps to the Notion **Project Directory** property and takes precedence over **Repository** when both are set. Use `repo` (→ Repository) for a GitHub URL that should be cloned; use `project_dir` (→ Project Directory) for a path already on the machine. Resolution order per task: `Project Directory` → `Repository` → template default (`repo`) → `config.json` `repo.path`.
+**`project_dir`** (optional, per task): an existing local directory the agent runs in **as-is** — never cloned. It maps to the Notion **Project Directory** property and takes precedence over **Repository** when both are set. Use `repo` (→ Repository) for a GitHub URL that should be cloned; use `project_dir` (→ Project Directory) for a path already on the machine. Resolution order per task: `Project Directory` → `Repository` → template default (`repo`) → **Repositories DB lookup** (when the value is a bare name) → `config.json` `repo.path`.
 
 After producing the plan, the user can pipe it to KADE:
 

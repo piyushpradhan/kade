@@ -122,6 +122,9 @@ test("orchestrationPreamble includes the format spec and the task cap", () => {
   assert.match(p, /<task-plan>/);
   assert.match(p, /at most 7 tasks/);
   assert.match(p, /self-contained|stand alone/);
+  assert.match(p, /<needs-decision>/);
+  assert.match(p, /In Review/);
+  assert.match(p, /1\. First option/);
 });
 
 const { extractDecision, resumePreamble } = require("../lib/plan");
