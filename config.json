@@ -1,15 +1,30 @@
 {
   "notion": {
-    "tasks_database_id": "8d07db1a-e37b-820b-88fc-81633545f728",
-    "projects_database_id": "6367db1a-e37b-825a-b873-07c081968236",
+    "tasks_database_id": "b047db1a-e37b-83ad-b6d8-81e106a639a0",
+    "projects_database_id": "07e7db1a-e37b-830a-b407-81f070c0596b",
     "token_env": "NOTION_TOKEN",
     "success_status": "Done",
-    "failure_status": "Not Started"
+    "failure_status": "Not Started",
+    "review_status": "In Review"
   },
   "poll": {
     "interval_seconds": 30,
     "max_concurrent": 3,
-    "api_delay_ms": 350
+    "api_delay_ms": 350,
+    "discover": true,
+    "discover_ttl_seconds": 300
+  },
+  "orchestration": {
+    "enabled": true,
+    "preamble": true,
+    "auto_start": true,
+    "max_followups_per_run": 20,
+    "max_tasks_per_project": 50,
+    "project_rollup": true
+  },
+  "output": {
+    "max_capture_bytes": 1048576,
+    "notion_max_chars": 100000
   },
   "repo": {
     "path": "/Users/mediocre/projects/kade"
@@ -21,9 +36,13 @@
       "subcommand": [],
       "prompt_flag": "-p",
       "model_flag": "--model",
+      "session_flag": "--session-id",
+      "resume_flag": "--resume",
       "prompt_as_positional": false,
       "timeout_seconds": 600,
-      "extra_args": ["--dangerously-skip-permissions"]
+      "extra_args": [
+        "--dangerously-skip-permissions"
+      ]
     },
     "grok": {
       "command": "grok",
@@ -37,13 +56,20 @@
     },
     "opencode": {
       "command": "opencode",
-      "subcommand": ["run"],
+      "subcommand": [
+        "run"
+      ],
       "prompt_as_positional": true,
       "model_flag": "-m",
       "cwd_flag": "--dir",
-      "env": { "OPENCODE_CONFIG": "./opencode.kade.jsonc" },
+      "env": {
+        "OPENCODE_CONFIG": "./opencode.kade.jsonc"
+      },
       "timeout_seconds": 600,
-      "extra_args": ["--pure", "--auto"]
+      "extra_args": [
+        "--pure",
+        "--auto"
+      ]
     },
     "codex": {
       "command": "codex",

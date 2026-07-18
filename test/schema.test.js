@@ -17,9 +17,11 @@ test("mapStatus converts plan values to Notion template options", () => {
 });
 
 test("STATUS has no phantom options absent from the live template", () => {
+  // "In Review" is required by the decision-gating flow — the Tasks DB must
+  // carry this status option (validateSchema enforces it at startup).
   assert.deepEqual(
     Object.values(STATUS).sort(),
-    ["Archived", "Done", "In Progress", "Not Started"]
+    ["Archived", "Done", "In Progress", "In Review", "Not Started"]
   );
 });
 

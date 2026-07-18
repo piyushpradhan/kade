@@ -47,6 +47,8 @@ If `model` is set but `provider` is omitted, provider is inferred from the model
 
 **`repo`** (optional): the repository the tasks run in — a GitHub URL (cloned into `repos_root`) or an absolute local path. Set it once at the **plan level**; `populate.js` stores it as the template default (in the Tasks DB description), not on each task. Add `"repo"` to a specific task or subtask only to override that one. Omit to use the machine's `config.json` `repo.path`.
 
+**`project_dir`** (optional, per task): an existing local directory the agent runs in **as-is** — never cloned. It maps to the Notion **Project Directory** property and takes precedence over **Repository** when both are set. Use `repo` (→ Repository) for a GitHub URL that should be cloned; use `project_dir` (→ Project Directory) for a path already on the machine. Resolution order per task: `Project Directory` → `Repository` → template default (`repo`) → `config.json` `repo.path`.
+
 After producing the plan, the user can pipe it to KADE:
 
 ```bash
@@ -56,3 +58,13 @@ cat plan.json | ./scripts/populate-from-stdin.sh
 ```
 
 Tasks appear in the Notion **Tasks** database under the linked **Projects** entry. Move a task to **In Progress** in Notion to trigger the poller daemon.
+
+## Follow-up plans at runtime
+
+The same `<task-plan>` format is the contract *between* dispatched agents and the poller. Every dispatched prompt carries a preamble telling the agent it may end its output with one `<task-plan>` block; on success the poller writes that plan back into the same template:
+
+- top-level tasks become **subtasks of the just-finished task** (the plan's own `subtasks` nest beneath them), in the same project, inheriting the origin's provider/model unless overridden;
+- `blocked_by` / `related` wire the follow-ups together, and `project` / `goal` / `repo` are only honored when the origin task had no project;
+- follow-ups are created as **In Progress** when `orchestration.auto_start` is on, so the workflow continues unattended until every related ticket is Done.
+
+Guardrails live in `config.json` under `orchestration` (`enabled`, `max_followups_per_run`, `max_tasks_per_project`, `project_rollup`). When working on the KADE codebase itself, keep `lib/plan.js` (parsing/extraction) in sync with this contract and update this file if the format changes.

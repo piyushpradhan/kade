@@ -60,6 +60,54 @@ function upsertEnv(envText, key, value) {
   return (envText ? envText.replace(/\n?$/, "\n") : "") + line + "\n";
 }
 
+async function manualDatabases(config) {
+  console.log(paint(c.dim, "  Paste the id or the full Notion URL.\n"));
+  return {
+    tasksId: normalizeId(await ask("Tasks database", { def: config.notion.tasks_database_id, required: true })),
+    projectsId: normalizeId(await ask("Projects database", { def: config.notion.projects_database_id, required: true })),
+  };
+}
+
+// Auto-discover the template's Tasks+Projects DBs from the shared page — no id
+// pasting. Falls back to manual entry with no token or if search finds nothing
+// (e.g. the page isn't shared yet, or Notion's search index hasn't caught up).
+async function resolveDatabases(config, token, tokenEnv) {
+  if (!token) return manualDatabases(config);
+
+  process.env[tokenEnv] = token;
+  delete require.cache[require.resolve("../src/notion-client")];
+  const { discoverTemplates, templateLabel } = require("../src/notion-client");
+
+  process.stdout.write(paint(c.dim, "  Searching your shared pages… "));
+  let templates = [];
+  try {
+    templates = await discoverTemplates();
+  } catch (err) {
+    console.log(paint(c.red, "failed") + paint(c.dim, ` (${err.message})`));
+    return manualDatabases(config);
+  }
+
+  if (templates.length === 0) {
+    console.log(paint(c.yellow, "none found"));
+    console.log(paint(c.dim, "  Share the KADE page with your integration, then re-run — or enter ids by hand.\n"));
+    return manualDatabases(config);
+  }
+
+  let chosen = templates[0];
+  if (templates.length === 1) {
+    console.log(paint(c.green, "found ") + paint(c.dim, `"${chosen.name}"`));
+  } else {
+    const labels = templates.map((t) => templateLabel(templates, t));
+    console.log(paint(c.green, `found ${templates.length}`));
+    templates.forEach((t, i) => console.log(paint(c.dim, `    ${i + 1}. `) + labels[i]));
+    const pick = Number(await ask("Default template #", { def: "1", required: true }));
+    chosen = templates[pick - 1] || templates[0];
+    const chosenLabel = labels[templates.indexOf(chosen)];
+    console.log(paint(c.dim, `  Default → ${chosenLabel}. Populate others with `) + paint(c.cyan, "--template <name>") + "\n");
+  }
+  return { tasksId: chosen.tasksDbId, projectsId: chosen.projectsDbId };
+}
+
 async function main() {
   console.log(paint(c.bold + c.magenta, "\n  ⬡ KADE setup\n"));
   console.log(paint(c.dim, "  Notion-driven AI task orchestration. Let's wire up the basics.\n"));
@@ -68,16 +116,11 @@ async function main() {
   const tokenEnv = config.notion.token_env || "NOTION_TOKEN";
 
   console.log(paint(c.bold, "  1. Notion integration"));
-  console.log(paint(c.dim, "     Create one at https://www.notion.so/my-integrations and share both DBs with it.\n"));
+  console.log(paint(c.dim, "     Create one at https://www.notion.so/my-integrations and share your KADE page with it.\n"));
   const token = await askSecret(`Paste your ${tokenEnv}`);
 
-  console.log(paint(c.bold, "\n  2. Databases") + paint(c.dim, "  (paste the id or the full Notion URL)"));
-  const tasksId = normalizeId(
-    await ask("Tasks database", { def: config.notion.tasks_database_id, required: true })
-  );
-  const projectsId = normalizeId(
-    await ask("Projects database", { def: config.notion.projects_database_id, required: true })
-  );
+  console.log(paint(c.bold, "\n  2. Template"));
+  const { tasksId, projectsId } = await resolveDatabases(config, token, tokenEnv);
 
   console.log(paint(c.bold, "\n  3. Working repo") + paint(c.dim, "  where agents run"));
   const repoPath = await ask("Repo path", { def: config.repo.path || process.cwd(), required: true });
@@ -102,8 +145,10 @@ async function main() {
     process.env[tokenEnv] = token;
     process.stdout.write(paint(c.dim, "\n  Validating Notion schema… "));
     try {
-      delete require.cache[require.resolve("../src/notion-client")];
-      const { validateSchema } = require("../src/notion-client");
+      // Reuse the module loaded during discovery (don't re-require — that would
+      // re-read the stale cached config.json). Point it at the ids we just wrote.
+      const { validateSchema, useTemplate } = require("../src/notion-client");
+      useTemplate({ tasksDbId: tasksId, projectsDbId: projectsId });
       await validateSchema();
       console.log(paint(c.green, "ok\n"));
     } catch (err) {

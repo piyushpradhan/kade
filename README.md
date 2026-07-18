@@ -15,7 +15,7 @@ npm install
 npm run setup
 ```
 
-`npm run setup` prompts for your token, the two database ids (paste the id or the full Notion URL), and the working repo path, writes `.env` + `config.json`, then validates the live schema.
+`npm run setup` prompts for your token, then **auto-discovers** your template's Projects + Tasks databases from the shared page (no ids to paste — pick a default if you have several), asks for the working repo path, writes `.env` + `config.json`, and validates the live schema. If nothing is shared yet it falls back to asking for the ids by hand.
 
 <details>
 <summary>Prefer to do it by hand?</summary>
@@ -36,6 +36,14 @@ On startup the poller also validates the live Notion schema (property names + St
 node src/populate.js test/sample-plan.json
 ```
 
+With multiple templates, target one by its page name (no config edit):
+
+```bash
+node src/populate.js --template Telemetry test/sample-plan.json
+```
+
+The name matches the KADE page title (exact, else a unique substring); both its Tasks and Projects DBs are discovered from that page. Omit the flag to use the pair in `config.json`. You can also set `"template": "Telemetry"` in the plan JSON.
+
 Or pipe JSON from your CLI session:
 
 ```bash
@@ -48,7 +56,18 @@ Or pipe JSON from your CLI session:
 ./scripts/start-poller.sh
 ```
 
-The poller watches for tasks with **Status = In Progress** and **Assigned = false**, then dispatches them to the configured provider CLI. On completion, status moves to **Done** (success) or back to **Not Started** (failure), per `config.json`. If the poller crashes mid-run, stale tasks are automatically reclaimed and re-dispatched after the lease timeout.
+The poller watches for tasks with **Status = In Progress** and **Assigned = false**, then dispatches them to the configured provider CLI (highest priority first). On completion, status moves to **Done** (success) or back to **Not Started** (failure), per `config.json`. If the poller crashes mid-run, stale tasks are automatically reclaimed and re-dispatched after the lease timeout.
+
+### Autonomous follow-ups
+
+A dispatched agent isn't limited to its own run. Every prompt carries a short KADE preamble teaching the agent the `<task-plan>` format; if the work decomposes, the agent ends its output with a plan block, and the poller writes it back into the **same template**:
+
+- Top-level follow-ups become **subtasks of the finished task** and inherit its project (plus its provider/model unless the plan overrides).
+- `blocked_by` / `related` wires the follow-ups together; blocked tasks wait until their blockers resolve.
+- Follow-ups are created as **In Progress** (`auto_start`), so the loop continues with no one touching the board — the agent's graph of related tickets works itself to completion.
+- Guardrails: ≤ `max_followups_per_run` tasks per plan, ≤ `max_tasks_per_project` per project, title+project dedup (a retried plan can't double-create), and project rollup — a project flips to **In Progress** when work starts and **Done** when its last open task finishes.
+
+Set `orchestration.enabled: false` in `config.json` to turn the whole loop off (plain one-shot dispatch).
 
 ## Workflow
 
@@ -57,7 +76,28 @@ The poller watches for tasks with **Status = In Progress** and **Assigned = fals
 3. Review tasks in Notion
 4. Move tasks to **In Progress** when ready
 5. Poller dispatches to the provider CLI
-6. Review completed work and mark **Done**
+6. The agent finishes — and may schedule its own follow-up subtasks, which the poller picks up on the next tick
+7. Review completed work; a project flips to **Done** when its last open task finishes
+
+## Reliability
+
+- **Transport** — every Notion call goes through one process-wide throttle (respects the ~3 req/s average) with exponential backoff on 429/5xx/network errors (`Retry-After` honored). A tick that throws is logged, never fatal; ticks never overlap.
+- **Crash recovery** — a task stuck `In Progress + Assigned` past its lease (provider timeout + 5 min) is reset and re-dispatched. `SIGINT`/`SIGTERM` stops the daemon and kills the whole agent process trees.
+- **Agents** — stdout/stderr capture is capped (tail kept) so a runaway agent can't OOM the daemon; timeouts SIGTERM then SIGKILL the entire process group.
+- **Idempotency** — populate dedups by title+project (tasks and subtasks); relation writes are batched and merged, never clobbering existing blockers.
+- **Output hygiene** — each run replaces the prior "Output"/"Error output" section instead of piling them up, and output is capped before writing to Notion.
+
+## Configuration
+
+| Key | Purpose |
+|---|---|
+| `poll.interval_seconds` / `max_concurrent` / `api_delay_ms` | Tick cadence, parallel agent cap, Notion throttle |
+| `poll.discover` / `discover_ttl_seconds` | Watch every shared template; how often to re-scan |
+| `orchestration.enabled` / `preamble` | Master switch for the follow-up loop / prompt preamble |
+| `orchestration.auto_start` | Create follow-ups as In Progress (else Not Started) |
+| `orchestration.max_followups_per_run` / `max_tasks_per_project` | Token-spend guardrails |
+| `orchestration.project_rollup` | Project status tracks its tasks |
+| `output.max_capture_bytes` / `notion_max_chars` | Agent capture cap / Notion write-back cap |
 
 ## Notion schema
 
@@ -91,7 +131,9 @@ A repo value can be a **GitHub URL** (`https://github.com/you/telemetry`) — cl
 
 1. Duplicate the KADE setup page.
 2. Set the default repo **once** — edit the Tasks DB description to `repo=<url>`, or put `repo` in your plan (`populate.js` writes it to the description for you).
-3. Share both databases with your integration.
+3. Share the databases with your integration — or, once, share the **parent page** that holds every template: Notion access inherits to child pages, so duplicates land pre-shared and you never revisit integration settings.
+
+Populate that template with `--template <page name>` (above); the poller finds it automatically.
 
 The poller **auto-discovers** every KADE "Tasks" database shared with the integration (one poller watches them all) and clones each repo on first run. Set `poll.discover: false` in `config.json` to watch only the configured DB.
 
@@ -101,15 +143,19 @@ The poller **auto-discovers** every KADE "Tasks" database shared with the integr
 
 ```
 kade/
-├── config.json          # Database IDs, poll settings, provider adapters
+├── config.json          # Database IDs, poll/orchestration settings, provider adapters
 ├── src/
-│   ├── populate.js      # JSON → Notion pages
-│   ├── poller.js        # Watches + dispatches
-│   ├── providers.js     # CLI spawn logic
-│   ├── notion-client.js # Notion API wrapper
+│   ├── populate.js      # JSON → Notion pages (CLI + reusable applyPlan)
+│   ├── poller.js        # Watches, dispatches, schedules follow-ups
+│   ├── providers.js     # CLI spawn logic (caps, timeouts, process groups)
+│   ├── notion-client.js # Notion API wrapper (throttle + retry + pagination)
 │   └── updater.js       # Post-completion updates
 ├── lib/
+│   ├── plan.js          # Plan parsing, follow-up extraction, relation batching
 │   ├── schema.js        # Property name mappings
+│   ├── models.js        # Provider/model catalog
+│   ├── repo.js          # Repo URL/path → working directory
+│   ├── output.js        # ANSI strip + Notion-size chunking
 │   └── logger.js
 └── scripts/
     ├── populate-from-stdin.sh
