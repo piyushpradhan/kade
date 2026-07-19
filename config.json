@@ -41,9 +41,7 @@
       "resume_flag": "--resume",
       "prompt_as_positional": false,
       "timeout_seconds": 600,
-      "extra_args": [
-        "--dangerously-skip-permissions"
-      ]
+      "extra_args": ["--dangerously-skip-permissions"]
     },
     "grok": {
       "command": "grok",
@@ -57,9 +55,7 @@
     },
     "opencode": {
       "command": "opencode",
-      "subcommand": [
-        "run"
-      ],
+      "subcommand": ["run"],
       "prompt_as_positional": true,
       "model_flag": "-m",
       "cwd_flag": "--dir",
@@ -67,10 +63,7 @@
         "OPENCODE_CONFIG": "./opencode.kade.jsonc"
       },
       "timeout_seconds": 600,
-      "extra_args": [
-        "--pure",
-        "--auto"
-      ]
+      "extra_args": ["--pure", "--auto"]
     },
     "codex": {
       "command": "codex",
@@ -93,10 +86,9 @@
   },
   "default_provider": "claude",
   "provider_icons": {
-    "claude": "🧠",
-    "grok": "🤖",
-    "opencode": "💻",
-    "codex": "🤖",
-    "gemini": "✨"
+    "claude": "custom_emoji:3a17db1a-e37b-8030-a872-007afc7d760f",
+    "grok": "custom_emoji:3a17db1a-e37b-807b-9b32-007a39f370eb",
+    "opencode": "custom_emoji:3a17db1a-e37b-80ae-beec-007aff4d201a",
+    "codex": "custom_emoji:3a17db1a-e37b-8070-bba9-007a0d142307"
   }
 }

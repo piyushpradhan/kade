@@ -5,6 +5,7 @@ const {
   validateSchema,
   getTaskDescription,
   markAssigned,
+  updatePageIcon,
   markComplete,
   markNeedsDecision,
   hasPendingDecision,
@@ -202,6 +203,7 @@ async function dispatchTask(task) {
 
   logger.info(`[poller] [${tag}] marking task Assigned + recording Started At`);
   await markAssigned(task.id);
+  await updatePageIcon(task.id);
   activeJobs.add(task.id);
   rollupProject(task, "started");
 

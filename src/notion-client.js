@@ -275,6 +275,18 @@ async function createSubtask(parentId, taskData, dbId = TASKS_DB) {
   return createTask({ ...taskData, parentId }, dbId);
 }
 
+async function updatePageIcon(pageId) {
+  const page = await api(() => notion.pages.retrieve({ page_id: pageId }), "updatePageIcon:read");
+  const provider = page.properties?.[PROPERTIES.provider]?.select?.name;
+  const icon = resolveProviderIcon(provider);
+  if (!icon) return false;
+  await api(
+    () => notion.pages.update({ page_id: pageId, icon }),
+    "updatePageIcon:write"
+  );
+  return true;
+}
+
 // Merge-write a relation property. Notion relation updates REPLACE the whole
 // array, so we read the current value first and union — per-relation writes
 // would clobber each other (multi-blocker tasks) and wipe manual edits.
@@ -1050,6 +1062,7 @@ function useTemplate({ tasksDbId, projectsDbId }) {
 module.exports = {
   createTask,
   createSubtask,
+  updatePageIcon,
   createRelation,
   mergeRelations,
   createProject,

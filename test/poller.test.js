@@ -13,6 +13,7 @@ const calls = {
   markAssigned: [],
   markComplete: [],
   markNeedsDecision: [],
+  updatePageIcon: [],
   createTask: [],
   createSubtask: [],
   mergeRelations: [],
@@ -42,6 +43,7 @@ require.cache[notionClientPath] = {
     markAssigned: async (id) => calls.markAssigned.push(id),
     markComplete: async (id, code, stdout, stderr) =>
       calls.markComplete.push({ id, code, stdout, stderr }),
+    updatePageIcon: async (id) => calls.updatePageIcon.push(id),
     markNeedsDecision: async (id, question, output) =>
       calls.markNeedsDecision.push({ id, question, output }),
     hasPendingDecision: async () => false,
